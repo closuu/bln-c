@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sticky Wall - bln-c</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+</head>
+<body>
+    <button id="nav-toggle" aria-label="Toggle navigation"><span></span><span></span><span></span></button>
+    <div id="nav-overlay"></div>
+
+    <header><h1>bln-c - sticky wall</h1></header>
+
+    <div class="container">
+        <aside>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="games.html">Catalogue</a></li>
+                    <li><a href="tracker.html">mini notepad</a></li>
+                    <li><a href="devlog.html">Devlog</a></li>
+                    <li><a href="rate.html">Rate My Week</a></li>
+                    <li><a href="wall.html">Sticky Wall</a></li>
+                    <br>
+                    <li><a href="login.html">Login</a></li>
+                    <li><a href="register.html">Registration</a></li>
+                </ul>
+            </nav>
+            <button id="theme-toggle">Toggle Monochrome</button>
+        </aside>
+
+        <main>
+            <h2>Sticky Wall</h2>
+            <p>Draw a note. Submit for review. If approved it shows up on the wall.</p>
+
+            <!-- Draw section (logged in only) -->
+            <div id="draw-section" style="display:none; margin-bottom:36px;">
+                <h3>Your canvas_</h3>
+                <div class="draw-toolbar">
+                    <label>Pen size:</label>
+                    <input type="range" id="pen-size" min="1" max="12" value="3" style="width:100px; accent-color:#1a1a18;">
+                    <button id="clear-btn" style="font-size:0.72em; padding:5px 12px;">Clear</button>
+                </div>
+
+                <canvas id="draw-canvas" class="draw-area" width="300" height="200"></canvas>
+
+                <div class="name-toggle-row">
+                    <input type="checkbox" id="show-name" checked style="accent-color:#1a1a18; width:14px; height:14px; cursor:pointer;">
+                    <label for="show-name">Show my username on the wall</label>
+                </div>
+
+                <button id="submit-drawing-btn">Submit for review</button>
+                <p id="draw-msg" style="margin-top:10px; min-height:18px; font-size:0.82em;"></p>
+            </div>
+
+            <!-- Not logged in -->
+            <div id="login-notice" style="display:none; background:#fff; border:1px solid #ddd; border-left:3px solid #1a1a18; padding:16px 20px; margin-bottom:28px;">
+                <p style="margin:0; color:#888;"><a href="login.html" style="color:#1a1a18;">Log in</a> to submit a sticky note to the wall.</p>
+            </div>
+
+            <!-- Public wall -->
+            <h3>The wall_</h3>
+            <p style="font-size:0.8em; color:#bbb; margin-bottom:12px;">Approved submissions from the community.</p>
+            <div class="canvas-wall-grid" id="public-wall">
+                <p style="padding:20px; color:#bbb; background:#faf8f5; font-size:0.82em;">Loading...</p>
+            </div>
+        </main>
+    </div>
+
+    <footer><p>&copy; 2026 - gonda Appdev Lab</p></footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/script.js"></script>
+    <script>
+    // ---- Canvas drawing ----
+    const canvas  = document.getElementById('draw-canvas');
+    const ctx     = canvas.getContext('2d');
+    let drawing   = false;
+    let lastX = 0, lastY = 0;
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = '#000000';
+    ctx.lineJoin = 'round';
+    ctx.lineCap  = 'round';
+
+    function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width  / rect.width;
+        const scaleY = canvas.height / rect.height;
+        if (e.touches) {
+            return {
+                x: (e.touches[0].clientX - rect.left) * scaleX,
+                y: (e.touches[0].clientY - rect.top)  * scaleY
+            };
+        }
+        return {
+            x: (e.clientX - rect.left) * scaleX,
+            y: (e.clientY - rect.top)  * scaleY
+        };
+    }
+
+    function startDraw(e) {
+        e.preventDefault();
+        drawing = true;
+        const pos = getPos(e);
+        lastX = pos.x; lastY = pos.y;
+        ctx.beginPath();
+        ctx.arc(lastX, lastY, ctx.lineWidth / 2, 0, Math.PI * 2);
+        ctx.fillStyle = '#000000';
+        ctx.fill();
+    }
+
+    function draw(e) {
+        if (!drawing) return;
+        e.preventDefault();
+        const pos = getPos(e);
+        ctx.lineWidth = parseInt(document.getElementById('pen-size').value);
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+        lastX = pos.x; lastY = pos.y;
+    }
+
+    function stopDraw() { drawing = false; }
+
+    canvas.addEventListener('mousedown',  startDraw);
+    canvas.addEventListener('mousemove',  draw);
+    canvas.addEventListener('mouseup',    stopDraw);
+    canvas.addEventListener('mouseleave', stopDraw);
+    canvas.addEventListener('touchstart', startDraw, { passive: false });
+    canvas.addEventListener('touchmove',  draw,      { passive: false });
+    canvas.addEventListener('touchend',   stopDraw);
+
+    document.getElementById('clear-btn').addEventListener('click', () => {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    });
+
+    // ---- Load public wall ----
+    async function loadWall() {
+        const { data: notes } = await sb
+            .from('sticky_notes')
+            .select('*')
+            .eq('approved', true)
+            .order('created_at', { ascending: false });
+
+        const wall = document.getElementById('public-wall');
+        const isMonochrome = document.body.classList.contains('monochrome-mode');
+
+        if (!notes || notes.length === 0) {
+            wall.innerHTML = '<p style="padding:20px; color:#bbb; background:#faf8f5; font-size:0.82em;">No approved notes yet. Be the first!</p>';
+            return;
+        }
+
+        wall.innerHTML = '';
+        notes.forEach(note => {
+            const card = document.createElement('div');
+            card.className = 'sticky-note-card';
+
+            const c = document.createElement('canvas');
+            c.width  = 300;
+            c.height = 200;
+            c.style.cssText = 'width:100%; height:160px; border:1px solid #e8e4de; display:block;';
+
+            const img = new Image();
+            img.onload = () => {
+                const cx = c.getContext('2d');
+                cx.drawImage(img, 0, 0);
+                if (isMonochrome) {
+                    // Invert: black lines → white on black
+                    cx.globalCompositeOperation = 'difference';
+                    cx.fillStyle = 'white';
+                    cx.fillRect(0, 0, c.width, c.height);
+                    cx.globalCompositeOperation = 'source-over';
+                }
+            };
+            img.src = note.image_data;
+
+            card.appendChild(c);
+
+            if (note.show_name && note.username) {
+                const author = document.createElement('div');
+                author.className = 'sticky-note-author';
+                author.textContent = '— ' + note.username;
+                card.appendChild(author);
+            }
+
+            wall.appendChild(card);
+        });
+    }
+
+    // Re-render wall on monochrome toggle
+    const themeBtn = document.getElementById('theme-toggle');
+    if (themeBtn) {
+        themeBtn.addEventListener('click', () => {
+            setTimeout(loadWall, 50);
+        });
+    }
+
+    // ---- Auth + submit ----
+    (async () => {
+        const { data: { session } } = await sb.auth.getSession();
+
+        if (session) {
+            document.getElementById('draw-section').style.display = 'block';
+
+            document.getElementById('submit-drawing-btn').addEventListener('click', async () => {
+                const msgEl    = document.getElementById('draw-msg');
+                const showName = document.getElementById('show-name').checked;
+                const imageData = canvas.toDataURL('image/png');
+
+                // Get username
+                const { data: profile } = await sb
+                    .from('profiles').select('username').eq('id', session.user.id).single();
+
+                msgEl.textContent = 'Submitting...';
+
+                const { error } = await sb.from('sticky_notes').insert({
+                    user_id:    session.user.id,
+                    username:   profile?.username || null,
+                    image_data: imageData,
+                    show_name:  showName,
+                    approved:   false
+                });
+
+                if (error) {
+                    msgEl.style.color = '#cc8888'; msgEl.textContent = error.message;
+                } else {
+                    msgEl.style.color = '#668866';
+                    msgEl.textContent = 'Submitted! Waiting for admin approval.';
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
+            });
+        } else {
+            document.getElementById('login-notice').style.display = 'block';
+        }
+
+        loadWall();
+    })();
+    </script>
+    <script>
+        (function () {
+            var toggle  = document.getElementById('nav-toggle');
+            var overlay = document.getElementById('nav-overlay');
+            var sidebar = document.querySelector('aside');
+            if (!toggle || !sidebar) return;
+            function openNav()  { toggle.classList.add('open'); sidebar.classList.add('open'); overlay.classList.add('open'); document.body.style.overflow = 'hidden'; }
+            function closeNav() { toggle.classList.remove('open'); sidebar.classList.remove('open'); overlay.classList.remove('open'); document.body.style.overflow = ''; }
+            toggle.addEventListener('click', function () { sidebar.classList.contains('open') ? closeNav() : openNav(); });
+            overlay.addEventListener('click', closeNav);
+            sidebar.querySelectorAll('a').forEach(function (a) { a.addEventListener('click', closeNav); });
+        })();
+    </script>
+</body>
+</html>

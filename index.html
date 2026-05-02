@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home - bln-c</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+    <style>
+        .hero-section {
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .hero-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .description {
+            margin-top: 15px;
+            line-height: 1.6;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/typed.js@2.1.0/dist/typed.umd.js"></script>
+</head>
+
+<body>
+
+    <!-- Mobile nav toggle -->
+    <button id="nav-toggle" aria-label="Toggle navigation"><span></span><span></span><span></span></button>
+    <div id="nav-overlay"></div>
+    <header>
+        <h1>bln-c - home</h1>
+    </header>
+
+    <div class="container">
+        <aside>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="games.html">Catalogue</a></li>
+                    <li><a href="tracker.html">mini notepad</a></li>
+                    <li><a href="devlog.html">Devlog</a></li>
+                    <li><a href="rate.html">Rate My Week</a></li>
+                    <li><a href="wall.html">Sticky Wall</a></li>
+                    <br>
+                    <li><a href="login.html">Login</a></li>
+                    <li><a href="register.html">Registration</a></li>
+                </ul>
+            </nav>
+            <button id="theme-toggle">Toggle Monochrome</button>
+        </aside>
+
+        <main>
+            <h2><span id="typed-title"></span></h2>
+            <p id="typed-sub" style="min-height:28px;"><span id="typed-desc"></span></p>
+
+            <section class="hero-section">
+                <img src="images/blob.PNG" alt="Website Banner" class="hero-image">
+                <div class="description">
+                    <h3>Personalized Learning Tips?</h3>
+                    <p><strong>no.</strong> </p>
+
+                    <p>but welcome to bln-c! :D</p>
+                    <p>Browse random media, save what matters, and keep something in order. That’s it.</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 - gonda Appdev Lab</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/script.js"></script>
+    <script>
+        // Typed.js — runs after DOM ready
+        document.addEventListener('DOMContentLoaded', function () {
+            new Typed('#typed-title', {
+                strings: ['introducing bln-c:', 'browse. save. organise.', 'welcome back.'],
+                typeSpeed: 55,
+                backSpeed: 30,
+                backDelay: 2200,
+                loop: true,
+                showCursor: true,
+                cursorChar: '_'
+            });
+            new Typed('#typed-desc', {
+                strings: [
+                    'A website where you can browse odd, random content and keep something sorted.',
+                    'log your notes, and more! ',
+                    'whatchu waiting for?'
+                ],
+                typeSpeed: 35,
+                backSpeed: 18,
+                backDelay: 2000,
+                startDelay: 600,
+                loop: true,
+                showCursor: false
+            });
+        });
+    </script>
+    <script>
+        (function () {
+            var toggle  = document.getElementById('nav-toggle');
+            var overlay = document.getElementById('nav-overlay');
+            var sidebar = document.querySelector('aside');
+            if (!toggle || !sidebar) return;
+
+            function openNav()  {
+                toggle.classList.add('open');
+                sidebar.classList.add('open');
+                overlay.classList.add('open');
+                document.body.style.overflow = 'hidden';
+            }
+            function closeNav() {
+                toggle.classList.remove('open');
+                sidebar.classList.remove('open');
+                overlay.classList.remove('open');
+                document.body.style.overflow = '';
+            }
+
+            toggle.addEventListener('click', function () {
+                sidebar.classList.contains('open') ? closeNav() : openNav();
+            });
+            overlay.addEventListener('click', closeNav);
+
+            
+            sidebar.querySelectorAll('a').forEach(function (a) {
+                a.addEventListener('click', closeNav);
+            });
+        })();
+    </script>
+</body>
+
+</html>

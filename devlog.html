@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Devlog - bln-c</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+</head>
+
+<body>
+
+    <button id="nav-toggle" aria-label="Toggle navigation"><span></span><span></span><span></span></button>
+    <div id="nav-overlay"></div>
+
+    <header>
+        <h1>bln-c - devlog</h1>
+    </header>
+
+    <div class="container">
+        <aside>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="games.html">Catalogue</a></li>
+                    <li><a href="devlog.html">Devlog</a></li>
+                    <li><a href="rate.html">Rate My Week</a></li>
+                    <li><a href="wall.html">Sticky Wall</a></li>
+                    <li><a href="tracker.html">mini notepad</a></li>
+                    <br>
+                    <li><a href="login.html">Login</a></li>
+                    <li><a href="register.html">Registration</a></li>
+                </ul>
+            </nav>
+            <button id="theme-toggle">Toggle Monochrome</button>
+        </aside>
+
+        <main>
+            <h2>Devlog</h2>
+            <p>Updates, progress notes, and random thoughts from development.</p>
+
+            <!-- Post form — only shown to admins -->
+            <div class="devlog-form" id="post-form" style="display: none;">
+                <h3 style="margin-bottom: 20px;">Post New Entry</h3>
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" id="log-title" placeholder="e.g. v0.3 — tracker update">
+                </div>
+                <div class="form-group">
+                    <label>Content</label>
+                    <textarea id="log-body" placeholder="What happened, what changed, what's next..."></textarea>
+                </div>
+                <button id="post-log-btn" class="action-btn edit">Post Entry</button>
+                <p id="log-message" style="margin-top: 12px; min-height: 20px;"></p>
+            </div>
+
+            <!-- Log entries -->
+            <div id="log-list">
+                <p style="color: #475569;">Loading entries...</p>
+            </div>
+        </main>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 - gonda Appdev Lab</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/script.js"></script>
+    <script>
+        (async () => {
+            const { data: { session } } = await sb.auth.getSession();
+            const logList = document.getElementById('log-list');
+
+            // Check if admin → show post form + delete buttons
+            let isAdmin = false;
+            if (session) {
+                const { data: profile } = await sb
+                    .from('profiles').select('role').eq('id', session.user.id).single();
+                if (profile?.role === 'admin') {
+                    isAdmin = true;
+                    document.getElementById('post-form').style.display = 'block';
+                }
+            }
+
+            // Load entries
+            async function loadLogs() {
+                const { data: logs } = await sb
+                    .from('devlog')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (!logs || logs.length === 0) {
+                    logList.innerHTML = '<p style="color:#475569;">No entries yet. Check back soon.</p>';
+                    return;
+                }
+
+                logList.innerHTML = logs.map(log => `
+                    <div class="devlog-entry">
+                        <div class="devlog-meta">${new Date(log.created_at).toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' })}</div>
+                        <h3>${log.title}</h3>
+                        <p>${log.body.replace(/\n/g, '<br>')}</p>
+                        ${isAdmin ? `<button class="action-btn delete-btn" style="margin-top:14px;" onclick="deleteLog('${log.id}')">Delete</button>` : ''}
+                    </div>`).join('');
+            }
+
+            loadLogs();
+
+            // Post new entry
+            document.getElementById('post-log-btn')?.addEventListener('click', async () => {
+                const title = document.getElementById('log-title').value.trim();
+                const body  = document.getElementById('log-body').value.trim();
+                const msgEl = document.getElementById('log-message');
+
+                if (!title || !body) { msgEl.style.color='#ff3366'; msgEl.textContent='Title and content required.'; return; }
+
+                const { error } = await sb.from('devlog').insert({ title, body });
+
+                if (error) {
+                    msgEl.style.color = '#ff3366'; msgEl.textContent = error.message;
+                } else {
+                    msgEl.style.color = '#00f2fe'; msgEl.textContent = '✓ Posted!';
+                    document.getElementById('log-title').value = '';
+                    document.getElementById('log-body').value  = '';
+                    loadLogs();
+                }
+            });
+
+            window.deleteLog = async (id) => {
+                if (!confirm('Delete this log entry?')) return;
+                await sb.from('devlog').delete().eq('id', id);
+                loadLogs();
+            };
+        })();
+    </script>
+    <script>
+        (function () {
+            var toggle  = document.getElementById('nav-toggle');
+            var overlay = document.getElementById('nav-overlay');
+            var sidebar = document.querySelector('aside');
+            if (!toggle || !sidebar) return;
+            function openNav()  { toggle.classList.add('open'); sidebar.classList.add('open'); overlay.classList.add('open'); document.body.style.overflow = 'hidden'; }
+            function closeNav() { toggle.classList.remove('open'); sidebar.classList.remove('open'); overlay.classList.remove('open'); document.body.style.overflow = ''; }
+            toggle.addEventListener('click', function () { sidebar.classList.contains('open') ? closeNav() : openNav(); });
+            overlay.addEventListener('click', closeNav);
+            sidebar.querySelectorAll('a').forEach(function (a) { a.addEventListener('click', closeNav); });
+        })();
+    </script>
+</body>
+
+</html>

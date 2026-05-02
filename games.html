@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multimedia Stuff - bln-c</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+</head>
+
+<body>
+
+    <!-- Mobile nav toggle -->
+    <button id="nav-toggle" aria-label="Toggle navigation"><span></span><span></span><span></span></button>
+    <div id="nav-overlay"></div>
+    <header>
+        <h1>bln-c - resources &amp; stuffs</h1>
+    </header>
+
+    <div class="container">
+        <aside>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="games.html">Catalogue</a></li>
+                    <li><a href="tracker.html">mini notepad</a></li>
+                    <li><a href="devlog.html">Devlog</a></li>
+                    <li><a href="rate.html">Rate My Week</a></li>
+                    <li><a href="wall.html">Sticky Wall</a></li>
+                    <br>
+                    <li><a href="login.html">Login</a></li>
+                    <li><a href="register.html">Registration</a></li>
+                </ul>
+            </nav>
+            <button id="theme-toggle">Toggle Monochrome</button>
+        </aside>
+
+        <main>
+            <h2>Multimedia Stuffs</h2>
+            <p>A collection of games, resources and more.</p>
+
+            <div class="games-grid" id="catalogue-grid">
+                <p style="color: #64748b;">Loading...</p>
+            </div>
+        </main>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 - gonda Appdev Lab</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/script.js"></script>
+    <script>
+        (async() => {
+                const {
+                    data: products
+                } = await sb
+                    .from('products')
+                    .select('*')
+                    .order('created_at', {
+                        ascending: false
+                    });
+
+                const grid = document.getElementById('catalogue-grid');
+
+                if (!products || products.length === 0) {
+                    grid.innerHTML = '<p style="color: #64748b;">No products uploaded yet. Check back soon.</p>';
+                    return;
+                }
+
+                grid.innerHTML = products.map(p => `
+                <div class="game-card">
+                    ${p.thumbnail_url
+                        ? `<img src="${p.thumbnail_url}" alt="${p.title}" class="game-card-thumb" onerror="this.style.display='none'">`
+                        : `<div class="game-card-thumb-placeholder">no preview</div>`}
+                    <span class="library-badge">${p.type || 'Item'}</span>
+                    <h3>${p.title}</h3>
+                    <p>${p.description || ''}</p>
+                    ${p.download_url
+                        ? `<a href="${p.download_url}" target="_blank"><button class="action-btn download-btn">View</button></a>`
+                        : ''}
+                </div>`).join('');
+        })();
+    </script>
+    <script>
+        (function () {
+            var toggle  = document.getElementById('nav-toggle');
+            var overlay = document.getElementById('nav-overlay');
+            var sidebar = document.querySelector('aside');
+            if (!toggle || !sidebar) return;
+
+            function openNav()  {
+                toggle.classList.add('open');
+                sidebar.classList.add('open');
+                overlay.classList.add('open');
+                document.body.style.overflow = 'hidden';
+            }
+            function closeNav() {
+                toggle.classList.remove('open');
+                sidebar.classList.remove('open');
+                overlay.classList.remove('open');
+                document.body.style.overflow = '';
+            }
+
+            toggle.addEventListener('click', function () {
+                sidebar.classList.contains('open') ? closeNav() : openNav();
+            });
+            overlay.addEventListener('click', closeNav);
+
+            // Close sidebar when any nav link is tapped
+            sidebar.querySelectorAll('a').forEach(function (a) {
+                a.addEventListener('click', closeNav);
+            });
+        })();
+    </script>
+</body>
+
+</html>

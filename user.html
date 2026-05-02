@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>bln-c - user profile</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+</head>
+
+<body>
+
+    <!-- Mobile nav toggle -->
+    <button id="nav-toggle" aria-label="Toggle navigation"><span></span><span></span><span></span></button>
+    <div id="nav-overlay"></div>
+    <header>
+        <h1>bln-c - user profile</h1>
+    </header>
+
+    <div class="container">
+        <aside>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="user.html">My Profile</a></li>
+                    <li><a href="games.html">Catalogue</a></li>
+                    <li><a href="tracker.html">mini notepad</a></li>
+                    <li><a href="devlog.html">Devlog</a></li>
+                    <li><a href="rate.html">Rate My Week</a></li>
+                    <li><a href="wall.html">Sticky Wall</a></li>
+                    <br>
+                    <li><a href="#" id="logout-link" style="color: #fe006a;">Logout</a></li>
+                </ul>
+            </nav>
+            <button id="theme-toggle">Toggle Monochrome</button>
+        </aside>
+
+        <main>
+            <div class="profile-header">
+                <div class="profile-avatar" id="avatar-letter">?</div>
+                <div class="profile-details">
+                    <h2 id="welcome-msg">Welcome back...</h2>
+                    <p id="member-info">Loading...</p>
+                </div>
+            </div>
+
+            <div class="stat-grid" style="margin-top: 30px;">
+                <div class="stat-card">
+                    <h3>Active Trackers</h3>
+                    <div class="stat-number" id="stat-trackers">—</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Plan</h3>
+                    <div class="stat-number" id="stat-plan" style="font-size: 1.4rem;">—</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Status</h3>
+                    <div class="stat-number" id="stat-status" style="font-size: 1.4rem;">—</div>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 40px; margin-bottom: 20px;">Catalogue</h3>
+            <p style="color: #94a3b8;">Click a product to view or access it, download directories, or browse source files.
+</p>
+
+            <div class="games-grid" id="library-grid">
+                <p style="color: #64748b;">Loading library...</p>
+            </div>
+        </main>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 - gonda Appdev Lab</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/script.js"></script>
+    <script>
+        (async() => {
+                
+                const {
+                    data: {
+                        session
+                    }
+                } = await sb.auth.getSession();
+                if (!session) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                
+                const {
+                    data: profile
+                } = await sb
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', session.user.id)
+                    .single();
+
+                if (profile) {
+                    const letter = (profile.username || 'U')[0].toUpperCase();
+                    document.getElementById('avatar-letter').textContent = letter;
+                    document.getElementById('welcome-msg').textContent = 'Welcome back, ' + profile.username;
+                    const joined = new Date(profile.created_at).toLocaleDateString('en-US', {
+                        month: 'long',
+                        year: 'numeric'
+                    });
+                    document.getElementById('member-info').textContent = 'Member since: ' + joined + ' | Plan: ' + profile.plan;
+                    document.getElementById('stat-plan').textContent = profile.plan;
+                    document.getElementById('stat-status').textContent = profile.status;
+                }
+
+                
+                const {
+                    count
+                } = await sb
+                    .from('tracker_items')
+                    .select('id', {
+                        count: 'exact',
+                        head: true
+                    })
+                    .eq('user_id', session.user.id);
+                document.getElementById('stat-trackers').textContent = count ?? 0;
+
+
+                const {
+                    data: products
+                } = await sb
+                    .from('products')
+                    .select('*')
+                    .order('created_at', {
+                        ascending: false
+                    });
+
+                const grid = document.getElementById('library-grid');
+                if (products && products.length > 0) {
+                    grid.innerHTML = products.map(p => `
+                    <div class="game-card">
+                        ${p.thumbnail_url
+                            ? `<img src="${p.thumbnail_url}" alt="${p.title}" class="game-card-thumb" onerror="this.style.display='none'">`
+                            : `<div class="game-card-thumb-placeholder">no preview</div>`}
+                        <span class="library-badge">${p.type || 'Item'}</span>
+                        <h3>${p.title}</h3>
+                        <p>${p.description || ''}</p>
+                        ${p.download_url
+                            ? `<a href="${p.download_url}" target="_blank"><button class="action-btn download-btn">View</button></a>`
+                            : `<button class="action-btn download-btn" disabled style="opacity: 0.4;">No file yet</button>`
+                        }
+                    </div>`).join('');
+            } else {
+                grid.innerHTML = '<p style="color: #64748b;">No products in the library yet.</p>';
+            }
+
+            
+            document.getElementById('logout-link').addEventListener('click', async (e) => {
+                e.preventDefault();
+                await sb.auth.signOut();
+                window.location.href = 'index.html';
+            });
+        })();
+    </script>
+    <script>
+        (function () {
+            var toggle  = document.getElementById('nav-toggle');
+            var overlay = document.getElementById('nav-overlay');
+            var sidebar = document.querySelector('aside');
+            if (!toggle || !sidebar) return;
+
+            function openNav()  {
+                toggle.classList.add('open');
+                sidebar.classList.add('open');
+                overlay.classList.add('open');
+                document.body.style.overflow = 'hidden';
+            }
+            function closeNav() {
+                toggle.classList.remove('open');
+                sidebar.classList.remove('open');
+                overlay.classList.remove('open');
+                document.body.style.overflow = '';
+            }
+
+            toggle.addEventListener('click', function () {
+                sidebar.classList.contains('open') ? closeNav() : openNav();
+            });
+            overlay.addEventListener('click', closeNav);
+
+            // Close sidebar when any nav link is tapped
+            sidebar.querySelectorAll('a').forEach(function (a) {
+                a.addEventListener('click', closeNav);
+            });
+        })();
+    </script>
+</body>
+
+</html>

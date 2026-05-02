@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - bln-c</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+    <style>
+        /* ---- Edit modals — light theme ---- */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.open { display: flex; }
+
+        .modal-box {
+            background: #faf8f5;
+            border: 2px solid #1a1a18;
+            box-shadow: 6px 6px 0 #ccc;
+            padding: 26px 28px 22px;
+            width: 90%;
+            max-width: 420px;
+        }
+        .modal-box h3 {
+            color: #1a1a18;
+            margin-bottom: 18px;
+            font-size: 0.95em;
+            letter-spacing: 2px;
+            text-transform: lowercase;
+            border-bottom: 1px solid #e8e4de;
+            padding-bottom: 10px;
+        }
+        .modal-box .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin-bottom: 13px;
+        }
+        .modal-box label {
+            color: #bbb;
+            font-size: 0.68em;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .modal-box input,
+        .modal-box select {
+            background: #fff;
+            border: 1px solid #ccc;
+            color: #1a1a18;
+            font-family: 'bitmap', monospace;
+            font-size: 0.9em;
+            outline: none;
+            padding: 10px 12px;
+            width: 100%;
+            appearance: none;
+            -webkit-appearance: none;
+            -webkit-font-smoothing: none;
+            font-smooth: never;
+            transition: border-color 0.1s ease;
+        }
+        .modal-box input:focus,
+        .modal-box select:focus { border-color: #1a1a18; box-shadow: 2px 2px 0 #ccc; }
+        .modal-box select {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23999' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 34px;
+            background-color: #fff;
+            cursor: pointer;
+        }
+        .modal-box select option { background: #fff; color: #1a1a18; }
+        .modal-box input::placeholder { color: #ccc; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+        .modal-actions button { flex: 1; }
+        .modal-read-only {
+            color: #bbb;
+            font-size: 0.76em;
+            padding: 3px 0;
+            letter-spacing: 1px;
+        }
+
+        /* Add product section */
+        .add-product-section { max-width: 480px; }
+        .add-product-section .form-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+        .add-product-section label { color: #bbb; font-size: 0.68em; text-transform: uppercase; letter-spacing: 2px; }
+        .add-product-section input,
+        .add-product-section select {
+            background: #faf8f5;
+            border: 1px solid #ddd;
+            color: #1a1a18;
+            font-family: 'bitmap', monospace;
+            font-size: 0.88em;
+            outline: none;
+            padding: 10px 13px;
+            width: 100%;
+            transition: border-color 0.1s ease;
+            appearance: none;
+            -webkit-appearance: none;
+            -webkit-font-smoothing: none;
+            font-smooth: never;
+        }
+        .add-product-section input:focus,
+        .add-product-section select:focus { border-color: #1a1a18; }
+        .add-product-section input::placeholder { color: #ccc; }
+        .add-product-section select {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23999' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 34px;
+            background-color: #faf8f5;
+            cursor: pointer;
+        }
+        .add-product-section select option { background: #fff; color: #1a1a18; }
+    </style>
+</head>
+
+<body>
+
+    <!-- Mobile nav toggle -->
+    <button id="nav-toggle" aria-label="Toggle navigation"><span></span><span></span><span></span></button>
+    <div id="nav-overlay"></div>
+    <header>
+        <h1>bln-c - admin</h1>
+    </header>
+
+    <div class="container">
+        <aside>
+            <nav>
+                <ul>
+                   <li><a href="#dashboard">Dashboard</a></li>
+                   <li><a href="#manage-users">Manage Users</a></li>
+                    <br>
+                    <li><a href="index.html" style="color: #fe006a;">&larr; Exit to Site</a></li>
+                </ul>
+            </nav>
+            <button id="theme-toggle">Toggle Monochrome</button>
+        </aside>
+
+        <main>
+            <h2 id="dashboard">System Overview</h2>
+            <p>Real-time metrics and database management.</p>
+
+            <div class="stat-grid">
+                <div class="stat-card">
+                    <h3>Total Users</h3>
+                    <div class="stat-number" id="stat-users">—</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Trackers</h3>
+                    <div class="stat-number" id="stat-trackers">—</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Products</h3>
+                    <div class="stat-number" id="stat-products">—</div>
+                </div>
+            </div>
+
+            <!-- Products table -->
+            <h3 style="margin-top: 40px; margin-bottom: 15px;">Catalogue Products</h3>
+            <div class="table-container" style="margin-bottom: 30px;">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Thumb</th>
+                            <th>Title</th>
+                            <th>Type</th>
+                            <th>Download</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="product-table-body">
+                        <tr><td colspan="5" style="text-align:center;color:#64748b;">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+           <h3 id="manage-users" style="margin-top: 40px; margin-bottom: 15px;">User Management</h3>
+            <div class="table-container">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Status</th>
+                            <th>Role</th>
+                            <th>Joined</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="user-table-body">
+                        <tr>
+                            <td colspan="6" style="text-align: center; color: #64748b;">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+
+            <h3 style="margin-top: 40px; margin-bottom: 15px;">Add Product to Catalogue</h3>
+            <div class="add-product-section">
+                <div class="form-group">
+                    <label>Product Title</label>
+                    <input type="text" id="prod-title" placeholder="e.g. Turns to KiLL v2">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <input type="text" id="prod-desc" placeholder="Short description">
+                </div>
+                <div class="form-group">
+                    <label>Type</label>
+                    <select id="prod-type">
+                        <option value="Game">Game</option>
+                        <option value="Software">Software</option>
+                        <option value="Asset">Asset</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Thumbnail URL (optional)</label>
+                    <input type="url" id="prod-thumb" placeholder="https://... (image link)">
+                </div>
+                <div class="form-group">
+                    <label>Download URL (optional)</label>
+                    <input type="url" id="prod-url" placeholder="https://...">
+                </div>
+                <button id="add-product-btn" class="action-btn edit">Add to Catalogue</button>
+                <p id="prod-message" style="margin-top: 12px; min-height: 20px;"></p>
+            </div>
+
+            <!-- Sticky Note Approvals -->
+            <h3 id="sticky-approvals" style="margin-top: 40px; margin-bottom: 15px;">Sticky Note Approvals</h3>
+            <p style="font-size:0.82em; color:#bbb; margin-bottom:14px;">Review submitted drawings before they appear on the public wall.</p>
+            <div id="pending-notes-list">
+                <p style="color:#bbb; font-size:0.82em;">Loading...</p>
+            </div>
+
+        </main>
+    </div>
+
+
+    <!-- Edit Product Modal -->
+    <div class="modal-overlay" id="edit-product-modal">
+        <div class="modal-box">
+            <h3>Edit Product</h3>
+            <input type="hidden" id="edit-prod-id">
+            <div class="form-group">
+                <label>Title</label>
+                <input type="text" id="edit-prod-title" placeholder="Product title">
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <input type="text" id="edit-prod-desc" placeholder="Short description">
+            </div>
+            <div class="form-group">
+                <label>Type</label>
+                <select id="edit-prod-type">
+                    <option value="Game">Game</option>
+                    <option value="Software">Software</option>
+                    <option value="Asset">Asset</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Thumbnail URL</label>
+                <input type="url" id="edit-prod-thumb" placeholder="https://...">
+            </div>
+            <div class="form-group">
+                <label>Download URL</label>
+                <input type="url" id="edit-prod-url" placeholder="https://...">
+            </div>
+            <div class="modal-actions">
+                <button class="action-btn edit" id="save-product-btn">Save Changes</button>
+                <button class="action-btn delete-btn" id="cancel-product-btn">Cancel</button>
+            </div>
+            <p id="edit-prod-message" style="margin-top: 10px; min-height: 18px; font-size: 0.82em;"></p>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div class="modal-overlay" id="edit-modal">
+        <div class="modal-box">
+            <h3>Edit User</h3>
+            <input type="hidden" id="edit-user-id">
+
+            <p class="modal-read-only" id="edit-email-display"></p>
+            <p class="modal-read-only" id="edit-joined-display"></p>
+
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="edit-username">
+            </div>
+            <div class="form-group">
+                <label>Role</label>
+                <select id="edit-role">
+                    <option value="user">User</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Status</label>
+                <select id="edit-status">
+                    <option value="active">Active</option>
+                    <option value="suspended">Suspended</option>
+                    <option value="banned">Banned</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Plan</label>
+                <select id="edit-plan">
+                    <option value="regular">Regular</option>
+                    <option value="premium">Premium</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="action-btn edit" id="save-edit-btn">Save Changes</button>
+                <button class="action-btn delete-btn" id="cancel-edit-btn">Cancel</button>
+            </div>
+            <p id="edit-message" style="margin-top: 12px; min-height: 20px;"></p>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 - gonda Appdev Lab</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/script.js"></script>
+    <script>
+        (async() => {
+
+            const {
+                data: {
+                    session
+                }
+            } = await sb.auth.getSession();
+            if (!session) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const {
+                data: me
+            } = await sb.from('profiles').select('role').eq('id', session.user.id).single();
+            if (!me || me.role !== 'admin') {
+                alert('Access denied. Admins only.');
+                window.location.href = 'index.html';
+                return;
+            }
+
+            loadStats();
+            loadUsers();
+            loadProducts();
+            loadPendingNotes();
+
+
+            async function loadStats() {
+                const [{
+                    count: uc
+                }, {
+                    count: tc
+                }, {
+                    count: pc
+                }] = await Promise.all([
+                    sb.from('profiles').select('id', {
+                        count: 'exact',
+                        head: true
+                    }),
+                    sb.from('tracker_items').select('id', {
+                        count: 'exact',
+                        head: true
+                    }),
+                    sb.from('products').select('id', {
+                        count: 'exact',
+                        head: true
+                    }),
+                ]);
+                document.getElementById('stat-users').textContent = uc ?? 0;
+                document.getElementById('stat-trackers').textContent = tc ?? 0;
+                document.getElementById('stat-products').textContent = pc ?? 0;
+            }
+
+
+            async function loadUsers() {
+                const {
+                    data: users
+                } = await sb
+                    .from('profiles')
+                    .select('*')
+                    .order('created_at', {
+                        ascending: false
+                    });
+
+                const tbody = document.getElementById('user-table-body');
+
+                if (!users || users.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#64748b;">No users yet.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = users.map(u => `
+                    <tr>
+                        <td>${u.username || '—'}</td>
+                        <td>${u.email || '—'}</td>
+                        <td><span class="status-badge ${u.status}">${u.status}</span></td>
+                        <td>${u.role}</td>
+                        <td>${new Date(u.created_at).toLocaleDateString()}</td>
+                        <td>
+                            <button class="action-btn edit"
+                                onclick="openEdit('${u.id}','${u.username}','${u.email}','${u.role}','${u.status}','${u.plan}','${u.created_at}')">
+                                Edit
+                            </button>
+                            <button class="action-btn delete-btn" onclick="banUser('${u.id}')">Ban</button>
+                        </td>
+                    </tr>`).join('');
+            }
+
+
+            // ---- Products table ----
+            async function loadProducts() {
+                const { data: products } = await sb
+                    .from('products')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                const tbody = document.getElementById('product-table-body');
+                if (!products || products.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#64748b;">No products yet.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = products.map(p => `
+                    <tr>
+                        <td>${p.thumbnail_url
+                            ? `<img src="${p.thumbnail_url}" style="width:48px;height:36px;object-fit:cover;" onerror="this.style.display='none'">`
+                            : '—'}</td>
+                        <td>${p.title}</td>
+                        <td>${p.type || '—'}</td>
+                        <td>${p.download_url ? `<a href="${p.download_url}" target="_blank" style="color:#555;">link</a>` : '—'}</td>
+                        <td>
+                            <button class="action-btn edit" onclick="openEditProduct('${p.id}','${(p.title||'').replace(/'/g,"\'")}','${(p.description||'').replace(/'/g,"\'")}','${p.type||''}','${p.thumbnail_url||''}','${p.download_url||''}')">Edit</button>
+                            <button class="action-btn delete-btn" onclick="deleteProduct('${p.id}')">Delete</button>
+                        </td>
+                    </tr>`).join('');
+            }
+
+            // ---- Edit product modal ----
+            window.openEditProduct = (id, title, desc, type, thumb, url) => {
+                document.getElementById('edit-prod-id').value    = id;
+                document.getElementById('edit-prod-title').value = title;
+                document.getElementById('edit-prod-desc').value  = desc || '';
+                document.getElementById('edit-prod-type').value  = type || 'Game';
+                document.getElementById('edit-prod-thumb').value = thumb || '';
+                document.getElementById('edit-prod-url').value   = url || '';
+                document.getElementById('edit-prod-message').textContent = '';
+                document.getElementById('edit-product-modal').classList.add('open');
+            };
+
+            document.getElementById('cancel-product-btn').addEventListener('click', () => {
+                document.getElementById('edit-product-modal').classList.remove('open');
+            });
+
+            document.getElementById('save-product-btn').addEventListener('click', async () => {
+                const id    = document.getElementById('edit-prod-id').value;
+                const msgEl = document.getElementById('edit-prod-message');
+                const update = {
+                    title:         document.getElementById('edit-prod-title').value.trim(),
+                    description:   document.getElementById('edit-prod-desc').value.trim(),
+                    type:          document.getElementById('edit-prod-type').value,
+                    thumbnail_url: document.getElementById('edit-prod-thumb').value.trim() || null,
+                    download_url:  document.getElementById('edit-prod-url').value.trim() || null,
+                };
+
+                if (!update.title) { msgEl.style.color = '#cc8888'; msgEl.textContent = 'Title is required.'; return; }
+
+                const { error } = await sb.from('products').update(update).eq('id', id);
+
+                if (error) {
+                    msgEl.style.color = '#cc8888';
+                    msgEl.textContent = error.message;
+                } else {
+                    msgEl.style.color = '#668866';
+                    msgEl.textContent = 'Saved!';
+                    setTimeout(() => {
+                        document.getElementById('edit-product-modal').classList.remove('open');
+                        loadProducts();
+                    }, 700);
+                }
+            });
+
+            window.deleteProduct = async (id) => {
+                if (!confirm('Delete this product from the catalogue?')) return;
+                await sb.from('products').delete().eq('id', id);
+                loadProducts();
+                loadStats();
+            };
+
+            window.openEdit = (id, username, email, role, status, plan, created_at) => {
+                document.getElementById('edit-user-id').value = id;
+                document.getElementById('edit-username').value = username;
+                document.getElementById('edit-role').value = role;
+                document.getElementById('edit-status').value = status;
+                document.getElementById('edit-plan').value = plan;
+                document.getElementById('edit-email-display').textContent = '✉ ' + email;
+                document.getElementById('edit-joined-display').textContent = '📅 Joined ' + new Date(created_at).toLocaleDateString();
+                document.getElementById('edit-message').textContent = '';
+                document.getElementById('edit-modal').classList.add('open');
+            };
+
+            document.getElementById('cancel-edit-btn').addEventListener('click', () => {
+                document.getElementById('edit-modal').classList.remove('open');
+            });
+
+            document.getElementById('save-edit-btn').addEventListener('click', async() => {
+                const id = document.getElementById('edit-user-id').value;
+                const msgEl = document.getElementById('edit-message');
+                const update = {
+                    username: document.getElementById('edit-username').value,
+                    role: document.getElementById('edit-role').value,
+                    status: document.getElementById('edit-status').value,
+                    plan: document.getElementById('edit-plan').value,
+                };
+
+                const {
+                    error
+                } = await sb.from('profiles').update(update).eq('id', id);
+
+                if (error) {
+                    msgEl.style.color = '#ff3366';
+                    msgEl.textContent = error.message;
+                } else {
+                    msgEl.style.color = '#00f2fe';
+                    msgEl.textContent = 'Saved!';
+                    setTimeout(() => {
+                        document.getElementById('edit-modal').classList.remove('open');
+                        loadUsers();
+                        loadStats();
+                    }, 800);
+                }
+            });
+
+
+           window.banUser = async (id) => {
+    if (!confirm('Permanently delete this user? This cannot be undone.')) return;
+
+    const { data: { session } } = await sb.auth.getSession();
+
+    const res = await fetch(
+        'https://boaxqjioomzfglaqopnr.supabase.co/functions/v1/delete-user',
+        {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + session.access_token
+            },
+            body: JSON.stringify({ userId: id })
+        }
+    );
+
+    const result = await res.json();
+
+    if (result.error) {
+        alert('Error: ' + result.error);
+    } else {
+        loadUsers();
+        loadStats();
+    }
+};
+
+            document.getElementById('add-product-btn').addEventListener('click', async() => {
+                const title = document.getElementById('prod-title').value.trim();
+                const desc = document.getElementById('prod-desc').value.trim();
+                const type = document.getElementById('prod-type').value;
+                const url = document.getElementById('prod-url').value.trim();
+                const msgEl = document.getElementById('prod-message');
+
+                if (!title) {
+                    msgEl.style.color = '#ff3366';
+                    msgEl.textContent = 'Title is required.';
+                    return;
+                }
+
+                const thumb = document.getElementById('prod-thumb').value.trim();
+
+                const {
+                    error
+                } = await sb.from('products').insert({
+                    title,
+                    description: desc,
+                    type,
+                    thumbnail_url: thumb || null,
+                    download_url: url || null
+                });
+
+                if (error) {
+                    msgEl.style.color = '#ff3366';
+                    msgEl.textContent = error.message;
+                } else {
+                    msgEl.style.color = '#00f2fe';
+                    msgEl.textContent = '✓ Product added to catalogue!';
+                    document.getElementById('prod-title').value = '';
+                    document.getElementById('prod-desc').value  = '';
+                    document.getElementById('prod-thumb').value = '';
+                    document.getElementById('prod-url').value   = '';
+                    loadStats();
+                }
+            });
+
+            // ---- Sticky note approvals ----
+            async function loadPendingNotes() {
+                const { data: notes } = await sb
+                    .from('sticky_notes')
+                    .select('*')
+                    .eq('approved', false)
+                    .order('created_at', { ascending: false });
+
+                const list = document.getElementById('pending-notes-list');
+
+                if (!notes || notes.length === 0) {
+                    list.innerHTML = '<p style="color:#bbb; font-size:0.82em;">No pending submissions.</p>';
+                    return;
+                }
+
+                list.innerHTML = '';
+                notes.forEach(note => {
+                    const card = document.createElement('div');
+                    card.className = 'pending-card';
+
+                    const c = document.createElement('canvas');
+                    c.width = 300; c.height = 200;
+                    c.style.cssText = 'width:100px; height:70px; border:1px solid #eee; flex-shrink:0;';
+                    const img = new Image();
+                    img.onload = () => c.getContext('2d').drawImage(img, 0, 0);
+                    img.src = note.image_data;
+
+                    const info = document.createElement('div');
+                    info.style.flex = '1';
+                    info.innerHTML = `
+                        <div style="font-size:0.72em; color:#bbb; letter-spacing:2px; margin-bottom:6px;">
+                            ${new Date(note.created_at).toLocaleDateString()} —
+                            ${note.show_name && note.username ? note.username : 'anonymous'}
+                        </div>`;
+
+                    const actions = document.createElement('div');
+                    actions.className = 'pending-card-actions';
+
+                    const approveBtn = document.createElement('button');
+                    approveBtn.className = 'action-btn edit';
+                    approveBtn.textContent = 'Approve';
+                    approveBtn.addEventListener('click', async () => {
+                        await sb.from('sticky_notes').update({ approved: true }).eq('id', note.id);
+                        loadPendingNotes();
+                    });
+
+                    const rejectBtn = document.createElement('button');
+                    rejectBtn.className = 'action-btn delete-btn';
+                    rejectBtn.textContent = 'Reject';
+                    rejectBtn.addEventListener('click', async () => {
+                        if (!confirm('Delete this submission?')) return;
+                        await sb.from('sticky_notes').delete().eq('id', note.id);
+                        loadPendingNotes();
+                    });
+
+                    actions.appendChild(approveBtn);
+                    actions.appendChild(rejectBtn);
+                    info.appendChild(actions);
+                    card.appendChild(c);
+                    card.appendChild(info);
+                    list.appendChild(card);
+                });
+            }
+
+        })();
+    </script>
+    <script>
+        (function () {
+            var toggle  = document.getElementById('nav-toggle');
+            var overlay = document.getElementById('nav-overlay');
+            var sidebar = document.querySelector('aside');
+            if (!toggle || !sidebar) return;
+
+            function openNav()  {
+                toggle.classList.add('open');
+                sidebar.classList.add('open');
+                overlay.classList.add('open');
+                document.body.style.overflow = 'hidden';
+            }
+            function closeNav() {
+                toggle.classList.remove('open');
+                sidebar.classList.remove('open');
+                overlay.classList.remove('open');
+                document.body.style.overflow = '';
+            }
+
+            toggle.addEventListener('click', function () {
+                sidebar.classList.contains('open') ? closeNav() : openNav();
+            });
+            overlay.addEventListener('click', closeNav);
+
+            // Close sidebar when any nav link is tapped
+            sidebar.querySelectorAll('a').forEach(function (a) {
+                a.addEventListener('click', closeNav);
+            });
+        })();
+    </script>
+</body>
+
+</html>

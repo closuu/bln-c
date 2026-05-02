@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>mini notepad - bln-c</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+</head>
+
+<body>
+
+    <!-- Mobile nav toggle -->
+    <button id="nav-toggle" aria-label="Toggle navigation"><span></span><span></span><span></span></button>
+    <div id="nav-overlay"></div>
+    <header>
+        <h1>bln-c - mini notepad</h1>
+    </header>
+
+    <div class="container">
+        <aside>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="games.html">Catalogue</a></li>
+                    <li><a href="tracker.html">mini notepad</a></li>
+                    <li><a href="devlog.html">Devlog</a></li>
+                    <li><a href="rate.html">Rate My Week</a></li>
+                    <li><a href="wall.html">Sticky Wall</a></li>
+                    <br>
+                    <li><a href="login.html">Login</a></li>
+                    <li><a href="register.html">Registration</a></li>
+                </ul>
+            </nav>
+            <button id="theme-toggle">Toggle Monochrome</button>
+        </aside>
+
+        <main>
+            <h2>mini notepad</h2>
+            <p>write stuff, close it, done</p>
+
+            <div class="tracker-container">
+                <input type="text" id="tracker-input" placeholder="e.g., finished doing chores..">
+                <button id="add-achievement">Add</button>
+                <ul id="achievement-list"></ul>
+            </div>
+
+            <p id="tracker-note" style="color: #64748b; margin-top: 20px; font-size: 0.85rem;"></p>
+        </main>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 - gonda Appdev Lab</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/script.js"></script>
+    <script>
+        let currentUserId = null;
+
+        function renderItem(item) {
+            const li = document.createElement('li');
+            li.dataset.id = item.id;
+            li.innerHTML = `
+                <span>
+                    <input type="checkbox" ${item.done ? 'checked' : ''}>
+                    <span class="item-text" style="${item.done ? 'text-decoration: line-through; opacity: 0.5;' : ''}">${item.text}</span>
+                </span>
+                <button class="delete-btn">X</button>`;
+
+            li.querySelector('input[type=checkbox]').addEventListener('change', async (e) => {
+                const textEl = li.querySelector('.item-text');
+                textEl.style.cssText = e.target.checked
+                    ? 'text-decoration: line-through; opacity: 0.5;'
+                    : '';
+                if (currentUserId) {
+                    await sb.from('tracker_items').update({ done: e.target.checked }).eq('id', item.id);
+                }
+            });
+
+            li.querySelector('.delete-btn').addEventListener('click', async () => {
+                li.remove();
+                if (currentUserId) {
+                    await sb.from('tracker_items').delete().eq('id', item.id);
+                }
+            });
+
+            return li;
+        }
+
+        (async () => {
+            const list    = document.getElementById('achievement-list');
+            const inputEl = document.getElementById('tracker-input');
+            const addBtn  = document.getElementById('add-achievement');
+            const noteEl  = document.getElementById('tracker-note');
+
+            const { data: { session } } = await sb.auth.getSession();
+
+            if (session) {
+                currentUserId = session.user.id;
+                noteEl.textContent = '✓ Logged in — your notes are saved to the cloud.';
+
+                const { data: items } = await sb
+                    .from('tracker_items')
+                    .select('*')
+                    .eq('user_id', currentUserId)
+                    .order('created_at');
+
+                (items || []).forEach(item => list.appendChild(renderItem(item)));
+
+            } else {
+                noteEl.textContent = 'Not logged in — notes will disappear when you close the tab. Log in to save them.';
+            }
+
+            async function addItem() {
+                const text = inputEl.value.trim();
+                if (!text) return;
+
+                if (currentUserId) {
+                    const { data: newItem } = await sb
+                        .from('tracker_items')
+                        .insert({ user_id: currentUserId, text, done: false })
+                        .select()
+                        .single();
+                    if (newItem) list.appendChild(renderItem(newItem));
+                } else {
+                    list.appendChild(renderItem({ id: Date.now(), text, done: false }));
+                }
+
+                inputEl.value = '';
+            }
+
+            addBtn.addEventListener('click', addItem);
+            inputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') addItem(); });
+        })();
+    </script>
+    <script>
+        (function () {
+            var toggle  = document.getElementById('nav-toggle');
+            var overlay = document.getElementById('nav-overlay');
+            var sidebar = document.querySelector('aside');
+            if (!toggle || !sidebar) return;
+
+            function openNav()  {
+                toggle.classList.add('open');
+                sidebar.classList.add('open');
+                overlay.classList.add('open');
+                document.body.style.overflow = 'hidden';
+            }
+            function closeNav() {
+                toggle.classList.remove('open');
+                sidebar.classList.remove('open');
+                overlay.classList.remove('open');
+                document.body.style.overflow = '';
+            }
+
+            toggle.addEventListener('click', function () {
+                sidebar.classList.contains('open') ? closeNav() : openNav();
+            });
+            overlay.addEventListener('click', closeNav);
+
+            // Close sidebar when any nav link is tapped
+            sidebar.querySelectorAll('a').forEach(function (a) {
+                a.addEventListener('click', closeNav);
+            });
+        })();
+    </script>
+</body>
+
+</html>

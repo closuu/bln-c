@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rate My Week - bln-c</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+</head>
+<body>
+    <button id="nav-toggle" aria-label="Toggle navigation"><span></span><span></span><span></span></button>
+    <div id="nav-overlay"></div>
+
+    <header><h1>bln-c - rate my week</h1></header>
+
+    <div class="container">
+        <aside>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="games.html">Catalogue</a></li>
+                    <li><a href="tracker.html">mini notepad</a></li>
+                    <li><a href="devlog.html">Devlog</a></li>
+                    <li><a href="rate.html">Rate My Week</a></li>
+                    <li><a href="wall.html">Sticky Wall</a></li>
+                    <br>
+                    <li><a href="login.html">Login</a></li>
+                    <li><a href="register.html">Registration</a></li>
+                </ul>
+            </nav>
+            <button id="theme-toggle">Toggle Monochrome</button>
+        </aside>
+
+        <main>
+            <h2>Rate My Week</h2>
+            <p>How did your week go? Log it, track it, see the pattern.</p>
+
+            <!-- Not logged in notice -->
+            <div id="login-notice" style="display:none; background:#fff; border:1px solid #ddd; border-left:3px solid #1a1a18; padding:16px 20px; margin-bottom:20px;">
+                <p style="margin:0; color:#888;">You need to <a href="login.html" style="color:#1a1a18;">log in</a> to rate your week and see your history.</p>
+            </div>
+
+            <!-- Submit form -->
+            <div class="rmw-form" id="submit-form" style="display:none;">
+                <h3>This week_</h3>
+                <p style="font-size:0.78em; color:#bbb; margin-bottom:14px; letter-spacing:1px;">Rate 1 (rough) to 10 (great)</p>
+                <div class="rating-row" id="rating-row"></div>
+                <textarea class="rmw-note" id="week-note" placeholder="add a short note about your week... (optional)"></textarea>
+                <button id="submit-week-btn">Log this week</button>
+                <p id="submit-msg" style="margin-top:10px; min-height:18px; font-size:0.82em;"></p>
+            </div>
+
+            <!-- Stats bar -->
+            <div class="rmw-stats-bar" id="stats-bar" style="display:none;">
+                <div class="rmw-stat">
+                    <div class="rmw-stat-label">Streak</div>
+                    <div class="rmw-stat-value" id="stat-streak">—</div>
+                </div>
+                <div class="rmw-stat">
+                    <div class="rmw-stat-label">Yearly avg</div>
+                    <div class="rmw-stat-value" id="stat-avg">—</div>
+                </div>
+                <div class="rmw-stat">
+                    <div class="rmw-stat-label">Total weeks</div>
+                    <div class="rmw-stat-value" id="stat-total">—</div>
+                </div>
+                <div class="rmw-stat">
+                    <div class="rmw-stat-label">Best week</div>
+                    <div class="rmw-stat-value" id="stat-best">—</div>
+                </div>
+            </div>
+
+            <!-- ASCII graph -->
+            <div id="graph-section" style="display:none;">
+                <h3>Last 12 weeks_</h3>
+                <div class="ascii-graph" id="ascii-graph"></div>
+            </div>
+
+            <!-- Entry list -->
+            <div id="entries-section" style="display:none;">
+                <h3>History_</h3>
+                <div id="entries-list"></div>
+            </div>
+        </main>
+    </div>
+
+    <footer><p>&copy; 2026 - gonda Appdev Lab</p></footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/script.js"></script>
+    <script>
+    const REACTIONS = ['solid', 'rough', 'chill', 'busy', 'proud', 'tired', 'motivated', 'meh'];
+
+    // Build rating buttons 1-10
+    const ratingRow = document.getElementById('rating-row');
+    let selectedRating = null;
+    for (let i = 1; i <= 10; i++) {
+        const btn = document.createElement('button');
+        btn.className = 'rating-btn';
+        btn.textContent = i;
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.rating-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            selectedRating = i;
+        });
+        ratingRow.appendChild(btn);
+    }
+
+    function buildAsciiGraph(entries) {
+        // Show last 12 weeks, oldest first
+        const slice = [...entries].reverse().slice(-12);
+        const rows = [];
+        const bars = ['▁','▂','▃','▄','▅','▆','▇','█'];
+        rows.push('10 |');
+        for (let row = 10; row >= 1; row--) {
+            let line = row.toString().padStart(2) + ' |';
+            slice.forEach(e => {
+                line += e.score >= row ? ' █ ' : '   ';
+            });
+            rows.push(line);
+        }
+        rows.push('   +' + slice.map(() => '---').join(''));
+        rows.push('    ' + slice.map((e, i) => {
+            const d = new Date(e.created_at);
+            return ('W' + (i + 1)).padEnd(3);
+        }).join(''));
+        return rows.join('\n');
+    }
+
+    function scoreLabel(score) {
+        if (score >= 9)  return 'peak';
+        if (score >= 7)  return 'good';
+        if (score >= 5)  return 'okay';
+        if (score >= 3)  return 'rough';
+        return 'hard';
+    }
+
+    (async () => {
+        const { data: { session } } = await sb.auth.getSession();
+
+        if (!session) {
+            document.getElementById('login-notice').style.display = 'block';
+            return;
+        }
+
+        document.getElementById('submit-form').style.display = 'block';
+        document.getElementById('stats-bar').style.display   = 'flex';
+
+        const userId = session.user.id;
+
+        async function loadEntries() {
+            const { data: entries } = await sb
+                .from('week_ratings')
+                .select('*')
+                .eq('user_id', userId)
+                .order('created_at', { ascending: false });
+
+            if (!entries || entries.length === 0) return;
+
+            // Stats
+            const scores  = entries.map(e => e.score);
+            const avg     = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1);
+            const best    = Math.max(...scores);
+            const worst   = Math.min(...scores);
+
+            // Streak: count consecutive weeks from most recent
+            let streak = 0;
+            const now = new Date();
+            for (let i = 0; i < entries.length; i++) {
+                const d = new Date(entries[i].created_at);
+                const weeksAgo = Math.round((now - d) / (7 * 24 * 60 * 60 * 1000));
+                if (weeksAgo <= i + 1) streak++;
+                else break;
+            }
+
+            // This year only for avg
+            const thisYear = new Date().getFullYear();
+            const yearEntries = entries.filter(e => new Date(e.created_at).getFullYear() === thisYear);
+            const yearAvg = yearEntries.length
+                ? (yearEntries.reduce((a, e) => a + e.score, 0) / yearEntries.length).toFixed(1)
+                : '—';
+
+            document.getElementById('stat-streak').textContent = streak + 'w';
+            document.getElementById('stat-avg').textContent    = yearAvg;
+            document.getElementById('stat-total').textContent  = entries.length;
+            document.getElementById('stat-best').textContent   = best;
+
+            // ASCII graph
+            document.getElementById('graph-section').style.display   = 'block';
+            document.getElementById('ascii-graph').textContent        = buildAsciiGraph(entries);
+
+            // Entries list
+            document.getElementById('entries-section').style.display  = 'block';
+            const list = document.getElementById('entries-list');
+
+            // Load reactions
+            const { data: allReactions } = await sb
+                .from('week_reactions')
+                .select('*')
+                .in('rating_id', entries.map(e => e.id));
+
+            list.innerHTML = entries.map(entry => {
+                const isBest  = entry.score === best && scores.filter(s => s === best).length >= 1;
+                const isWorst = entry.score === worst && entry.score !== best;
+                const entryReactions = allReactions ? allReactions.filter(r => r.rating_id === entry.id) : [];
+
+                const reactionHTML = REACTIONS.map(word => {
+                    const count = entryReactions.filter(r => r.word === word).length;
+                    const userReacted = entryReactions.some(r => r.word === word && r.reactor_id === userId);
+                    return `<span class="reaction-pill ${userReacted ? 'reacted' : ''}"
+                        onclick="toggleReaction('${entry.id}', '${word}', this)">
+                        ${word}<span class="reaction-count">${count > 0 ? ' ' + count : ''}</span>
+                    </span>`;
+                }).join('');
+
+                return `<div class="rmw-entry">
+                    <div class="rmw-entry-score">${entry.score}</div>
+                    <div class="rmw-entry-body">
+                        <div class="rmw-entry-date">
+                            ${new Date(entry.created_at).toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' })}
+                            ${isBest  ? '<span class="rmw-badge best">best</span>'  : ''}
+                            ${isWorst ? '<span class="rmw-badge worst">worst</span>' : ''}
+                            <span style="color:#bbb; font-size:0.9em; margin-left:6px;">${scoreLabel(entry.score)}</span>
+                        </div>
+                        ${entry.note ? `<div class="rmw-entry-note">${entry.note}</div>` : ''}
+                        <div class="reaction-row">${reactionHTML}</div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        loadEntries();
+
+        // Toggle reaction
+        window.toggleReaction = async (ratingId, word, el) => {
+            const isReacted = el.classList.contains('reacted');
+            const countEl   = el.querySelector('.reaction-count');
+
+            if (isReacted) {
+                await sb.from('week_reactions').delete()
+                    .eq('rating_id', ratingId).eq('word', word).eq('reactor_id', userId);
+                el.classList.remove('reacted');
+                const c = parseInt(countEl.textContent) || 0;
+                countEl.textContent = c > 1 ? ' ' + (c - 1) : '';
+            } else {
+                await sb.from('week_reactions').insert({ rating_id: ratingId, word, reactor_id: userId });
+                el.classList.add('reacted');
+                const c = parseInt(countEl.textContent) || 0;
+                countEl.textContent = ' ' + (c + 1);
+            }
+        };
+
+        // Submit
+        document.getElementById('submit-week-btn').addEventListener('click', async () => {
+            const msgEl = document.getElementById('submit-msg');
+            if (!selectedRating) { msgEl.style.color='#cc8888'; msgEl.textContent='Pick a rating first.'; return; }
+
+            const note = document.getElementById('week-note').value.trim();
+
+            // Check if already rated this week
+            const weekStart = new Date();
+            weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+            weekStart.setHours(0,0,0,0);
+
+            const { data: existing } = await sb
+                .from('week_ratings')
+                .select('id')
+                .eq('user_id', userId)
+                .gte('created_at', weekStart.toISOString())
+                .single();
+
+            if (existing) {
+                msgEl.style.color = '#cc8888';
+                msgEl.textContent = 'You already rated this week. Come back next week!';
+                return;
+            }
+
+            const { error } = await sb.from('week_ratings').insert({
+                user_id: userId, score: selectedRating, note: note || null
+            });
+
+            if (error) {
+                msgEl.style.color = '#cc8888'; msgEl.textContent = error.message;
+            } else {
+                msgEl.style.color = '#668866'; msgEl.textContent = 'Week logged!';
+                document.getElementById('week-note').value = '';
+                document.querySelectorAll('.rating-btn').forEach(b => b.classList.remove('selected'));
+                selectedRating = null;
+                loadEntries();
+            }
+        });
+    })();
+    </script>
+    <script>
+        (function () {
+            var toggle  = document.getElementById('nav-toggle');
+            var overlay = document.getElementById('nav-overlay');
+            var sidebar = document.querySelector('aside');
+            if (!toggle || !sidebar) return;
+            function openNav()  { toggle.classList.add('open'); sidebar.classList.add('open'); overlay.classList.add('open'); document.body.style.overflow = 'hidden'; }
+            function closeNav() { toggle.classList.remove('open'); sidebar.classList.remove('open'); overlay.classList.remove('open'); document.body.style.overflow = ''; }
+            toggle.addEventListener('click', function () { sidebar.classList.contains('open') ? closeNav() : openNav(); });
+            overlay.addEventListener('click', closeNav);
+            sidebar.querySelectorAll('a').forEach(function (a) { a.addEventListener('click', closeNav); });
+        })();
+    </script>
+</body>
+</html>

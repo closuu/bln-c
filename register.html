@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - bln-csite</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+</head>
+
+<body>
+
+    <!-- Mobile nav toggle -->
+    <button id="nav-toggle" aria-label="Toggle navigation"><span></span><span></span><span></span></button>
+    <div id="nav-overlay"></div>
+    <header>
+        <h1>bln-csite - registration</h1>
+    </header>
+
+    <div class="container">
+        <aside>
+            <ul>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="login.html">Login</a></li>
+                <li><a href="register.html">Registration</a></li>
+            </ul>
+            <button id="theme-toggle">Toggle Monochrome</button>
+        </aside>
+
+        <main>
+            <h2>Create an Account</h2>
+            <p id="auth-message" style="color: #ff3366; margin-bottom: 16px; min-height: 20px;"></p>
+
+            <form id="register-form" action="#">
+                <div class="form-group">
+                    <label for="reg-user">Username</label>
+                    <input type="text" id="reg-user" name="reg-user" placeholder="Choose a username" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" placeholder="Enter your email" required>
+                </div>
+                <div class="form-group">
+                    <label for="reg-pass">Password</label>
+                    <input type="password" id="reg-pass" name="reg-pass" placeholder="Create a password" required>
+                </div>
+                <div class="form-group">
+                    <label for="conf-pass">Confirm Password</label>
+                    <input type="password" id="conf-pass" name="conf-pass" placeholder="Repeat your password" required>
+                </div>
+                <div class="form-group">
+                    <label for="gender">Gender</label>
+                    <select id="gender" name="gender">
+                        <option value="">-- Select --</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <button type="submit">Register</button>
+            </form>
+        </main>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 - gonda Appdev Lab</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/script.js"></script>
+    <script>
+        document.getElementById('register-form').addEventListener('submit', async(e) => {
+            e.preventDefault();
+            const username = document.getElementById('reg-user').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('reg-pass').value.trim();
+            const confirm = document.getElementById('conf-pass').value.trim();
+            const gender = document.getElementById('gender').value;
+            const msg = document.getElementById('auth-message');
+
+            msg.style.color = '#ff3366';
+
+            if (!username || !email || !password) {
+                msg.textContent = 'Please fill in all required fields.';
+                return;
+            }
+            if (password !== confirm) {
+                msg.textContent = 'Passwords do not match.';
+                return;
+            }
+            if (password.length < 6) {
+                msg.textContent = 'Password must be at least 6 characters.';
+                return;
+            }
+
+            msg.textContent = 'Creating account...';
+
+            const {
+                data,
+                error
+            } = await sb.auth.signUp({
+                email,
+                password
+            });
+
+            if (error) {
+                msg.textContent = error.message;
+                return;
+            }
+
+            // Save extra profile info
+            await sb.from('profiles').insert({
+                id: data.user.id,
+                username: username,
+                email: email,
+                gender: gender,
+                role: 'user',
+                status: 'active',
+                plan: 'regular'
+            });
+
+            msg.style.color = '#00f2fe';
+            msg.textContent = 'Account created! You can now log in.';
+        });
+    </script>
+    <script>
+        (function () {
+            var toggle  = document.getElementById('nav-toggle');
+            var overlay = document.getElementById('nav-overlay');
+            var sidebar = document.querySelector('aside');
+            if (!toggle || !sidebar) return;
+
+            function openNav()  {
+                toggle.classList.add('open');
+                sidebar.classList.add('open');
+                overlay.classList.add('open');
+                document.body.style.overflow = 'hidden';
+            }
+            function closeNav() {
+                toggle.classList.remove('open');
+                sidebar.classList.remove('open');
+                overlay.classList.remove('open');
+                document.body.style.overflow = '';
+            }
+
+            toggle.addEventListener('click', function () {
+                sidebar.classList.contains('open') ? closeNav() : openNav();
+            });
+            overlay.addEventListener('click', closeNav);
+
+            // Close sidebar when any nav link is tapped
+            sidebar.querySelectorAll('a').forEach(function (a) {
+                a.addEventListener('click', closeNav);
+            });
+        })();
+    </script>
+</body>
+
+</html>
