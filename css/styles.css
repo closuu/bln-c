@@ -72,7 +72,7 @@ header {
 }
 
 header::after {
-    content: '[ BLAN-WEB OS v0.4 ]';
+    content: '[ bln-c v.6 f ]';
     font-size: 0.62em;
     color: #555;
     letter-spacing: 2px;
