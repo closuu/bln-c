@@ -194,11 +194,17 @@
         });
     }
 
-    // Re-render wall on monochrome toggle
     const themeBtn = document.getElementById('theme-toggle');
     if (themeBtn) {
         themeBtn.addEventListener('click', () => {
-            setTimeout(loadWall, 50);
+            // Read localStorage AFTER script.js has written it
+            setTimeout(() => {
+                const isMonochrome = localStorage.getItem('theme') === 'monochrome';
+                document.querySelectorAll('#public-wall canvas[data-src]').forEach(c => {
+                    c.style.filter     = isMonochrome ? 'invert(1)' : 'invert(0)';
+                    c.style.background = isMonochrome ? '#000' : '#fff';
+                });
+            }, 100);
         });
     }
 
