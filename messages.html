@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messages - bln-c</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+</head>
+<body>
+    <button id="nav-toggle" aria-label="Toggle navigation"><span></span><span></span><span></span></button>
+    <div id="nav-overlay"></div>
+
+    <header><h1>bln-c - messages</h1></header>
+
+    <div class="container">
+        <aside>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="games.html">Catalogue</a></li>
+                    <li><a href="tracker.html">mini notepad</a></li>
+                    <li><a href="devlog.html">Devlog</a></li>
+                    <li><a href="rate.html">Rate My Week</a></li>
+                    <li><a href="wall.html">Sticky Wall</a></li>
+                    <li><a href="messages.html">Messages</a></li>
+                    <br>
+                    <li><a href="login.html">Login</a></li>
+                    <li><a href="register.html">Registration</a></li>
+                </ul>
+            </nav>
+            <button id="theme-toggle">Toggle Monochrome</button>
+        </aside>
+
+        <main>
+            <h2>Messages</h2>
+
+            <!-- Not logged in -->
+            <div id="login-notice" style="display:none; background:#fff; border:1px solid #ddd; border-left:3px solid #1a1a18; padding:16px 20px;">
+                <p style="margin:0; color:#888;"><a href="login.html" style="color:#1a1a18;">Log in</a> to send and receive messages.</p>
+            </div>
+
+            <!-- Messaging UI -->
+            <div id="msg-ui" style="display:none;">
+                <!-- New conversation -->
+                <div class="new-conv-row">
+                    <input type="text" id="new-username" placeholder="username to message...">
+                    <button id="new-conv-btn">Start</button>
+                </div>
+                <p id="new-conv-msg" style="font-size:0.8em; min-height:18px; margin-bottom:12px;"></p>
+
+                <!-- Layout: conversations left, chat right -->
+                <div class="messages-layout">
+                    <div class="conversations-list" id="conv-list">
+                        <div class="conv-header">conversations</div>
+                        <p style="padding:14px; font-size:0.78em; color:#bbb;">Loading...</p>
+                    </div>
+
+                    <div class="chat-area" id="chat-area">
+                        <div class="chat-empty" id="chat-empty">
+                            <span>select a conversation_</span>
+                        </div>
+                        <div class="chat-header" id="chat-header" style="display:none;"></div>
+                        <div class="chat-messages" id="chat-messages" style="display:none;"></div>
+                        <div class="chat-input-row" id="chat-input-row" style="display:none;">
+                            <input type="text" id="msg-input" placeholder="type a message...">
+                            <button id="send-btn">Send</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <footer><p>&copy; 2026 - gonda Appdev Lab</p></footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/script.js"></script>
+    <script>
+    let currentUserId   = null;
+    let currentUsername = null;
+    let activeConvId    = null;
+    let pollInterval    = null;
+
+    function timeAgo(dateStr) {
+        const diff = Date.now() - new Date(dateStr).getTime();
+        const m = Math.floor(diff / 60000);
+        const h = Math.floor(m / 60);
+        const d = Math.floor(h / 24);
+        if (m < 1)  return 'just now';
+        if (m < 60) return m + 'm ago';
+        if (h < 24) return h + 'h ago';
+        return d + 'd ago';
+    }
+
+    async function loadConversations() {
+        const { data: convs } = await sb
+            .from('conversations')
+            .select('*, messages(content, created_at, sender_id)')
+            .or(`user_a.eq.${currentUserId},user_b.eq.${currentUserId}`)
+            .order('updated_at', { ascending: false });
+
+        const list = document.getElementById('conv-list');
+        list.innerHTML = '<div class="conv-header">conversations</div>';
+
+        if (!convs || convs.length === 0) {
+            list.innerHTML += '<p style="padding:14px; font-size:0.78em; color:#bbb;">No conversations yet.</p>';
+            return;
+        }
+
+        // Get partner usernames
+        const partnerIds = convs.map(c => c.user_a === currentUserId ? c.user_b : c.user_a);
+        const { data: profiles } = await sb
+            .from('profiles')
+            .select('id, username, avatar_url')
+            .in('id', partnerIds);
+
+        const profileMap = {};
+        (profiles || []).forEach(p => profileMap[p.id] = p);
+
+        convs.forEach(conv => {
+            const partnerId = conv.user_a === currentUserId ? conv.user_b : conv.user_a;
+            const partner   = profileMap[partnerId] || { username: 'unknown' };
+            const msgs      = conv.messages || [];
+            const lastMsg   = msgs.sort((a,b) => new Date(b.created_at) - new Date(a.created_at))[0];
+
+            const item = document.createElement('div');
+            item.className = 'conv-item' + (conv.id === activeConvId ? ' active' : '');
+            item.dataset.convId     = conv.id;
+            item.dataset.partnerId  = partnerId;
+            item.dataset.partnerName = partner.username;
+            item.innerHTML = `
+                <div class="conv-username">${partner.username}</div>
+                <div class="conv-preview">${lastMsg ? lastMsg.content : 'no messages yet'}</div>`;
+            item.addEventListener('click', () => openConversation(conv.id, partner.username, partnerId));
+            list.appendChild(item);
+        });
+    }
+
+    async function openConversation(convId, partnerName, partnerId) {
+        activeConvId = convId;
+
+        // Update active state
+        document.querySelectorAll('.conv-item').forEach(i => i.classList.remove('active'));
+        const activeItem = document.querySelector(`[data-conv-id="${convId}"]`);
+        if (activeItem) activeItem.classList.add('active');
+
+        document.getElementById('chat-empty').style.display      = 'none';
+        document.getElementById('chat-header').style.display     = 'block';
+        document.getElementById('chat-messages').style.display   = 'flex';
+        document.getElementById('chat-input-row').style.display  = 'flex';
+        document.getElementById('chat-header').textContent       = '// ' + partnerName;
+
+        await loadMessages(convId);
+
+        // Poll for new messages every 4 seconds
+        if (pollInterval) clearInterval(pollInterval);
+        pollInterval = setInterval(() => loadMessages(convId), 4000);
+    }
+
+    async function loadMessages(convId) {
+        const { data: msgs } = await sb
+            .from('messages')
+            .select('*')
+            .eq('conversation_id', convId)
+            .order('created_at', { ascending: true });
+
+        const container = document.getElementById('chat-messages');
+        container.innerHTML = '';
+
+        if (!msgs || msgs.length === 0) {
+            container.innerHTML = '<p style="color:#ccc; font-size:0.78em; text-align:center; margin:auto;">no messages yet. say hi!</p>';
+            return;
+        }
+
+        msgs.forEach(msg => {
+            const div = document.createElement('div');
+            div.className = 'msg-bubble ' + (msg.sender_id === currentUserId ? 'mine' : 'theirs');
+            div.innerHTML = `${msg.content}<span class="msg-time">${timeAgo(msg.created_at)}</span>`;
+            container.appendChild(div);
+        });
+
+        container.scrollTop = container.scrollHeight;
+    }
+
+    async function sendMessage() {
+        const input   = document.getElementById('msg-input');
+        const content = input.value.trim();
+        if (!content || !activeConvId) return;
+
+        input.value = '';
+
+        await sb.from('messages').insert({
+            conversation_id: activeConvId,
+            sender_id:       currentUserId,
+            content
+        });
+
+        // Update conversation timestamp
+        await sb.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', activeConvId);
+
+        loadMessages(activeConvId);
+        loadConversations();
+    }
+
+    (async () => {
+        const { data: { session } } = await sb.auth.getSession();
+
+        if (!session) {
+            document.getElementById('login-notice').style.display = 'block';
+            return;
+        }
+
+        currentUserId = session.user.id;
+        document.getElementById('msg-ui').style.display = 'block';
+
+        // Get own username
+        const { data: me } = await sb.from('profiles').select('username').eq('id', currentUserId).single();
+        currentUsername = me?.username;
+
+        loadConversations();
+
+        // Start new conversation by username
+        document.getElementById('new-conv-btn').addEventListener('click', async () => {
+            const targetUsername = document.getElementById('new-username').value.trim();
+            const msgEl = document.getElementById('new-conv-msg');
+
+            if (!targetUsername) { msgEl.style.color='#cc8888'; msgEl.textContent='Enter a username.'; return; }
+            if (targetUsername === currentUsername) { msgEl.style.color='#cc8888'; msgEl.textContent="You can't message yourself."; return; }
+
+            // Find target user
+            const { data: target } = await sb
+                .from('profiles').select('id, username').eq('username', targetUsername).single();
+
+            if (!target) { msgEl.style.color='#cc8888'; msgEl.textContent='User not found.'; return; }
+
+            // Check if conversation already exists
+            const { data: existing } = await sb
+                .from('conversations')
+                .select('id')
+                .or(`and(user_a.eq.${currentUserId},user_b.eq.${target.id}),and(user_a.eq.${target.id},user_b.eq.${currentUserId})`)
+                .single();
+
+            if (existing) {
+                msgEl.style.color = '#668866'; msgEl.textContent = 'Conversation already exists.';
+                openConversation(existing.id, target.username, target.id);
+                loadConversations();
+                return;
+            }
+
+            // Create new conversation
+            const { data: newConv } = await sb.from('conversations').insert({
+                user_a: currentUserId,
+                user_b: target.id,
+                updated_at: new Date().toISOString()
+            }).select().single();
+
+            msgEl.style.color = '#668866'; msgEl.textContent = 'Started!';
+            document.getElementById('new-username').value = '';
+            await loadConversations();
+            openConversation(newConv.id, target.username, target.id);
+        });
+
+        // Send on button click or Enter
+        document.getElementById('send-btn').addEventListener('click', sendMessage);
+        document.getElementById('msg-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        // Allow Enter on new conv input
+        document.getElementById('new-username').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') document.getElementById('new-conv-btn').click();
+        });
+    })();
+    </script>
+    <script>
+        (function () {
+            var toggle  = document.getElementById('nav-toggle');
+            var overlay = document.getElementById('nav-overlay');
+            var sidebar = document.querySelector('aside');
+            if (!toggle || !sidebar) return;
+            function openNav()  { toggle.classList.add('open'); sidebar.classList.add('open'); overlay.classList.add('open'); document.body.style.overflow = 'hidden'; }
+            function closeNav() { toggle.classList.remove('open'); sidebar.classList.remove('open'); overlay.classList.remove('open'); document.body.style.overflow = ''; }
+            toggle.addEventListener('click', function () { sidebar.classList.contains('open') ? closeNav() : openNav(); });
+            overlay.addEventListener('click', closeNav);
+            sidebar.querySelectorAll('a').forEach(function (a) { a.addEventListener('click', closeNav); });
+        })();
+    </script>
+</body>
+</html>

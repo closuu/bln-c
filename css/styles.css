@@ -1360,3 +1360,338 @@ body.monochrome-mode .sticky-note-card canvas { border-color: #222; filter: inve
 body.monochrome-mode .draw-area { background: #fff; border-color: #fff; box-shadow: 3px 3px 0 #333; filter: invert(0); }
 body.monochrome-mode .pending-card { background: #0a0a0a; border-color: #333; border-left-color: #fff; }
 body.monochrome-mode .pending-card canvas { filter: invert(1); border-color: #333; }
+
+/* ============================================================
+   --- PROFILE PICTURE
+   ============================================================ */
+.profile-avatar-wrap {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.profile-avatar-wrap img.profile-pic {
+    width: 56px;
+    height: 56px;
+    object-fit: cover;
+    display: block;
+    border: 2px solid #1a1a18;
+    box-shadow: 2px 2px 0 #ccc;
+}
+
+.profile-pic-upload-btn {
+    position: absolute;
+    bottom: -6px;
+    right: -6px;
+    background: #1a1a18;
+    color: #f0ede8;
+    border: none;
+    font-size: 0.55em;
+    padding: 3px 5px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    line-height: 1;
+}
+
+.profile-pic-upload-btn:hover {
+    background: #444;
+    transform: none;
+    box-shadow: none;
+}
+
+body.monochrome-mode .profile-avatar-wrap img.profile-pic {
+    border-color: #fff;
+    box-shadow: 2px 2px 0 #333;
+}
+
+/* ============================================================
+   --- USER CATALOGUE SUBMISSION
+   ============================================================ */
+.user-submit-form {
+    background: #fff;
+    border: 1px solid #ddd;
+    padding: 22px;
+    margin-top: 32px;
+    max-width: 500px;
+}
+
+.user-submit-form h3 {
+    color: #1a1a18;
+    margin-bottom: 16px;
+    border: none;
+    padding: 0;
+    font-size: 0.92em;
+    letter-spacing: 2px;
+}
+
+.user-submit-form .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-bottom: 13px;
+}
+
+.user-submit-form label {
+    color: #bbb;
+    font-size: 0.7em;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.user-submit-form input,
+.user-submit-form select,
+.user-submit-form textarea {
+    background: #faf8f5;
+    border: 1px solid #ddd;
+    color: #1a1a18;
+    font-family: 'bitmap', monospace;
+    font-size: 0.88em;
+    outline: none;
+    padding: 10px 13px;
+    width: 100%;
+    transition: border-color 0.1s ease;
+    appearance: none;
+    -webkit-appearance: none;
+    -webkit-font-smoothing: none;
+    font-smooth: never;
+    resize: vertical;
+}
+
+.user-submit-form input:focus,
+.user-submit-form select:focus,
+.user-submit-form textarea:focus { border-color: #1a1a18; }
+.user-submit-form input::placeholder,
+.user-submit-form textarea::placeholder { color: #ccc; }
+
+.user-submit-form select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23999' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 34px;
+    background-color: #faf8f5;
+    cursor: pointer;
+}
+
+body.monochrome-mode .user-submit-form {
+    background: #0a0a0a;
+    border-color: #222;
+}
+body.monochrome-mode .user-submit-form h3 { color: #fff; }
+body.monochrome-mode .user-submit-form input,
+body.monochrome-mode .user-submit-form select,
+body.monochrome-mode .user-submit-form textarea {
+    background: #000;
+    border-color: #333;
+    color: #fff;
+}
+
+/* ============================================================
+   --- MESSAGES PAGE
+   ============================================================ */
+.messages-layout {
+    display: flex;
+    gap: 0;
+    height: 65vh;
+    border: 1px solid #ddd;
+    background: #ddd;
+    margin-top: 16px;
+}
+
+.conversations-list {
+    width: 220px;
+    min-width: 220px;
+    background: #faf8f5;
+    border-right: 1px solid #ddd;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.conv-header {
+    padding: 12px 14px;
+    border-bottom: 1px solid #eee;
+    font-size: 0.68em;
+    color: #bbb;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    background: #f5f3ef;
+}
+
+.conv-item {
+    padding: 12px 14px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    transition: background 0.1s ease;
+    border-left: 3px solid transparent;
+}
+
+.conv-item:hover { background: #f0ede8; }
+.conv-item.active { background: #fff; border-left-color: #1a1a18; }
+
+.conv-username {
+    font-size: 0.82em;
+    color: #1a1a18;
+    margin-bottom: 2px;
+}
+
+.conv-preview {
+    font-size: 0.7em;
+    color: #bbb;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.conv-unread {
+    display: inline-block;
+    background: #1a1a18;
+    color: #f0ede8;
+    font-size: 0.6em;
+    padding: 1px 5px;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+
+/* Chat area */
+.chat-area {
+    flex: 1;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid #eee;
+    font-size: 0.82em;
+    color: #1a1a18;
+    letter-spacing: 2px;
+    background: #faf8f5;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.chat-empty {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ccc;
+    font-size: 0.78em;
+    letter-spacing: 2px;
+}
+
+.msg-bubble {
+    max-width: 72%;
+    padding: 9px 13px;
+    font-size: 0.84em;
+    line-height: 1.6;
+    position: relative;
+}
+
+.msg-bubble.mine {
+    background: #1a1a18;
+    color: #f0ede8;
+    align-self: flex-end;
+    border: 1px solid #1a1a18;
+}
+
+.msg-bubble.theirs {
+    background: #faf8f5;
+    color: #1a1a18;
+    align-self: flex-start;
+    border: 1px solid #e8e4de;
+}
+
+.msg-time {
+    font-size: 0.6em;
+    color: #888;
+    margin-top: 3px;
+    display: block;
+}
+
+.msg-bubble.mine .msg-time { color: #888; text-align: right; }
+
+.chat-input-row {
+    display: flex;
+    gap: 0;
+    border-top: 1px solid #eee;
+}
+
+.chat-input-row input {
+    flex: 1;
+    padding: 12px 14px;
+    border: none;
+    outline: none;
+    font-family: 'bitmap', monospace;
+    font-size: 0.88em;
+    color: #1a1a18;
+    background: #fff;
+    -webkit-font-smoothing: none;
+    font-smooth: never;
+}
+
+.chat-input-row input::placeholder { color: #ccc; }
+
+.chat-input-row button {
+    padding: 12px 18px;
+    border-radius: 0;
+    font-size: 0.78em;
+    border-left: 1px solid #eee;
+}
+
+/* New conversation */
+.new-conv-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    max-width: 400px;
+}
+
+.new-conv-row input {
+    flex: 1;
+    padding: 10px 13px;
+    background: #fff;
+    border: 1px solid #ddd;
+    color: #1a1a18;
+    font-family: 'bitmap', monospace;
+    font-size: 0.88em;
+    outline: none;
+    -webkit-font-smoothing: none;
+    font-smooth: never;
+    transition: border-color 0.1s ease;
+}
+.new-conv-row input:focus { border-color: #1a1a18; }
+.new-conv-row input::placeholder { color: #ccc; }
+
+/* Monochrome messages */
+body.monochrome-mode .messages-layout { background: #222; border-color: #222; }
+body.monochrome-mode .conversations-list { background: #0a0a0a; border-color: #222; }
+body.monochrome-mode .conv-header { background: #000; border-color: #222; color: #333; }
+body.monochrome-mode .conv-item { border-color: #1a1a1a; }
+body.monochrome-mode .conv-item:hover { background: #111; }
+body.monochrome-mode .conv-item.active { background: #0d0d0b; border-left-color: #fff; }
+body.monochrome-mode .conv-username { color: #fff; }
+body.monochrome-mode .conv-preview { color: #444; }
+body.monochrome-mode .conv-unread { background: #fff; color: #000; }
+body.monochrome-mode .chat-area { background: #0a0a0a; }
+body.monochrome-mode .chat-header { background: #000; border-color: #222; color: #fff; }
+body.monochrome-mode .chat-messages { background: #0a0a0a; }
+body.monochrome-mode .msg-bubble.mine { background: #fff; color: #000; border-color: #fff; }
+body.monochrome-mode .msg-bubble.theirs { background: #111; color: #fff; border-color: #222; }
+body.monochrome-mode .chat-input-row { border-color: #222; }
+body.monochrome-mode .chat-input-row input { background: #000; color: #fff; }
+body.monochrome-mode .new-conv-row input { background: #000; border-color: #333; color: #fff; }
+
+@media (max-width: 768px) {
+    .messages-layout { flex-direction: column; height: auto; }
+    .conversations-list { width: 100%; min-width: unset; max-height: 180px; border-right: none; border-bottom: 1px solid #ddd; }
+    .chat-area { min-height: 320px; }
+    .msg-bubble { max-width: 88%; }
+}

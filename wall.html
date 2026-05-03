@@ -23,6 +23,7 @@
                     <li><a href="devlog.html">Devlog</a></li>
                     <li><a href="rate.html">Rate My Week</a></li>
                     <li><a href="wall.html">Sticky Wall</a></li>
+                    <li><a href="messages.html">Messages</a></li>
                     <br>
                     <li><a href="login.html">Login</a></li>
                     <li><a href="register.html">Registration</a></li>
@@ -41,6 +42,7 @@
                 <div class="draw-toolbar">
                     <label>Pen size:</label>
                     <input type="range" id="pen-size" min="1" max="12" value="3" style="width:100px; accent-color:#1a1a18;">
+                    <button id="undo-btn" style="font-size:0.72em; padding:5px 12px;">Undo</button>
                     <button id="clear-btn" style="font-size:0.72em; padding:5px 12px;">Clear</button>
                 </div>
 
@@ -75,17 +77,23 @@
     <script src="js/supabase-config.js"></script>
     <script src="js/script.js"></script>
     <script>
-    // ---- Canvas drawing ----
+    // ---- Canvas drawing with undo ----
     const canvas  = document.getElementById('draw-canvas');
     const ctx     = canvas.getContext('2d');
     let drawing   = false;
     let lastX = 0, lastY = 0;
+    let undoStack = []; // stores snapshots before each stroke
 
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.strokeStyle = '#000000';
     ctx.lineJoin = 'round';
     ctx.lineCap  = 'round';
+
+    function saveSnapshot() {
+        undoStack.push(canvas.toDataURL());
+        if (undoStack.length > 30) undoStack.shift(); // cap at 30 steps
+    }
 
     function getPos(e) {
         const rect = canvas.getBoundingClientRect();
@@ -105,9 +113,11 @@
 
     function startDraw(e) {
         e.preventDefault();
+        saveSnapshot(); // save before each stroke
         drawing = true;
         const pos = getPos(e);
         lastX = pos.x; lastY = pos.y;
+        ctx.lineWidth = parseInt(document.getElementById('pen-size').value);
         ctx.beginPath();
         ctx.arc(lastX, lastY, ctx.lineWidth / 2, 0, Math.PI * 2);
         ctx.fillStyle = '#000000';
@@ -136,10 +146,24 @@
     canvas.addEventListener('touchmove',  draw,      { passive: false });
     canvas.addEventListener('touchend',   stopDraw);
 
+    document.getElementById('undo-btn').addEventListener('click', () => {
+        if (undoStack.length === 0) return;
+        const prev = undoStack.pop();
+        const img  = new Image();
+        img.onload = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0);
+        };
+        img.src = prev;
+    });
+
     document.getElementById('clear-btn').addEventListener('click', () => {
+        saveSnapshot();
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
     });
+
+    let isAdmin = false;
 
     // ---- Load public wall ----
     async function loadWall() {
@@ -150,12 +174,13 @@
             .order('created_at', { ascending: false });
 
         const wall = document.getElementById('public-wall');
-        const isMonochrome = document.body.classList.contains('monochrome-mode');
 
         if (!notes || notes.length === 0) {
             wall.innerHTML = '<p style="padding:20px; color:#bbb; background:#faf8f5; font-size:0.82em;">No approved notes yet. Be the first!</p>';
             return;
         }
+
+        const isMonochrome = localStorage.getItem('theme') === 'monochrome';
 
         wall.innerHTML = '';
         notes.forEach(note => {
@@ -165,20 +190,15 @@
             const c = document.createElement('canvas');
             c.width  = 300;
             c.height = 200;
+            c.dataset.src = note.image_data;
             c.style.cssText = 'width:100%; height:160px; border:1px solid #e8e4de; display:block;';
+            if (isMonochrome) {
+                c.style.filter     = 'invert(1)';
+                c.style.background = '#000';
+            }
 
             const img = new Image();
-            img.onload = () => {
-                const cx = c.getContext('2d');
-                cx.drawImage(img, 0, 0);
-                if (isMonochrome) {
-                    // Invert: black lines → white on black
-                    cx.globalCompositeOperation = 'difference';
-                    cx.fillStyle = 'white';
-                    cx.fillRect(0, 0, c.width, c.height);
-                    cx.globalCompositeOperation = 'source-over';
-                }
-            };
+            img.onload = () => c.getContext('2d').drawImage(img, 0, 0);
             img.src = note.image_data;
 
             card.appendChild(c);
@@ -190,14 +210,28 @@
                 card.appendChild(author);
             }
 
+            // Admin delete button
+            if (isAdmin) {
+                const delBtn = document.createElement('button');
+                delBtn.className = 'action-btn delete-btn';
+                delBtn.style.cssText = 'width:100%; margin-top:6px; font-size:0.7em;';
+                delBtn.textContent = 'Remove from wall';
+                delBtn.addEventListener('click', async () => {
+                    if (!confirm('Remove this note from the wall?')) return;
+                    await sb.from('sticky_notes').delete().eq('id', note.id);
+                    card.remove();
+                });
+                card.appendChild(delBtn);
+            }
+
             wall.appendChild(card);
         });
     }
 
+    // Live invert on monochrome toggle
     const themeBtn = document.getElementById('theme-toggle');
     if (themeBtn) {
         themeBtn.addEventListener('click', () => {
-            // Read localStorage AFTER script.js has written it
             setTimeout(() => {
                 const isMonochrome = localStorage.getItem('theme') === 'monochrome';
                 document.querySelectorAll('#public-wall canvas[data-src]').forEach(c => {
@@ -213,6 +247,11 @@
         const { data: { session } } = await sb.auth.getSession();
 
         if (session) {
+            // Check if admin for delete buttons
+            const { data: profile } = await sb
+                .from('profiles').select('role').eq('id', session.user.id).single();
+            if (profile?.role === 'admin') isAdmin = true;
+
             document.getElementById('draw-section').style.display = 'block';
 
             document.getElementById('submit-drawing-btn').addEventListener('click', async () => {

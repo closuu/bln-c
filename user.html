@@ -29,6 +29,7 @@
                     <li><a href="devlog.html">Devlog</a></li>
                     <li><a href="rate.html">Rate My Week</a></li>
                     <li><a href="wall.html">Sticky Wall</a></li>
+                    <li><a href="messages.html">Messages</a></li>
                     <br>
                     <li><a href="#" id="logout-link" style="color: #fe006a;">Logout</a></li>
                 </ul>
@@ -38,7 +39,12 @@
 
         <main>
             <div class="profile-header">
-                <div class="profile-avatar" id="avatar-letter">?</div>
+                <div class="profile-avatar-wrap">
+                    <div class="profile-avatar" id="avatar-letter" style="display:flex;align-items:center;justify-content:center;">?</div>
+                    <img id="avatar-img" class="profile-pic" src="" alt="profile" style="display:none; width:56px; height:56px;">
+                    <input type="file" id="pic-file" accept="image/*" style="display:none;">
+                    <button class="profile-pic-upload-btn" onclick="document.getElementById('pic-file').click()">edit</button>
+                </div>
                 <div class="profile-details">
                     <h2 id="welcome-msg">Welcome back...</h2>
                     <p id="member-info">Loading...</p>
@@ -101,7 +107,17 @@
 
                 if (profile) {
                     const letter = (profile.username || 'U')[0].toUpperCase();
-                    document.getElementById('avatar-letter').textContent = letter;
+
+                    // Show avatar image or letter fallback
+                    if (profile.avatar_url) {
+                        document.getElementById('avatar-letter').style.display = 'none';
+                        const img = document.getElementById('avatar-img');
+                        img.src = profile.avatar_url;
+                        img.style.display = 'block';
+                    } else {
+                        document.getElementById('avatar-letter').textContent = letter;
+                    }
+
                     document.getElementById('welcome-msg').textContent = 'Welcome back, ' + profile.username;
                     const joined = new Date(profile.created_at).toLocaleDateString('en-US', {
                         month: 'long',
@@ -111,6 +127,35 @@
                     document.getElementById('stat-plan').textContent = profile.plan;
                     document.getElementById('stat-status').textContent = profile.status;
                 }
+
+                // ---- Profile picture upload via Supabase Storage ----
+                document.getElementById('pic-file').addEventListener('change', async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    if (file.size > 2 * 1024 * 1024) { alert('Image must be under 2MB.'); return; }
+
+                    const ext      = file.name.split('.').pop();
+                    const filePath = session.user.id + '/avatar.' + ext;
+
+                    const { error: uploadError } = await sb.storage
+                        .from('avatars')
+                        .upload(filePath, file, { upsert: true });
+
+                    if (uploadError) { alert('Upload failed: ' + uploadError.message); return; }
+
+                    const { data: urlData } = sb.storage
+                        .from('avatars')
+                        .getPublicUrl(filePath);
+
+                    const publicUrl = urlData.publicUrl + '?t=' + Date.now();
+
+                    await sb.from('profiles').update({ avatar_url: publicUrl }).eq('id', session.user.id);
+
+                    document.getElementById('avatar-letter').style.display = 'none';
+                    const img = document.getElementById('avatar-img');
+                    img.src = publicUrl;
+                    img.style.display = 'block';
+                });
 
                 
                 const {
@@ -154,6 +199,70 @@
             }
 
             
+            // ---- Catalogue submission form ----
+            const main = document.querySelector('main');
+            const submitDiv = document.createElement('div');
+            submitDiv.innerHTML = `
+                <h3 style="margin-top:40px; margin-bottom:12px;">Submit to Catalogue_</h3>
+                <p style="color:#bbb; font-size:0.82em; margin-bottom:16px;">Submit a project or resource. Needs admin approval before going public.</p>
+                <div class="user-submit-form">
+                    <div class="form-group">
+                        <label>Title *</label>
+                        <input type="text" id="us-title" placeholder="e.g. My Game v1.0">
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <input type="text" id="us-desc" placeholder="Short description">
+                    </div>
+                    <div class="form-group">
+                        <label>Type</label>
+                        <select id="us-type">
+                            <option value="Game">Game</option>
+                            <option value="Software">Software</option>
+                            <option value="Asset">Asset</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Thumbnail URL (optional)</label>
+                        <input type="url" id="us-thumb" placeholder="https://...">
+                    </div>
+                    <div class="form-group">
+                        <label>Download / Link URL (optional)</label>
+                        <input type="url" id="us-url" placeholder="https://...">
+                    </div>
+                    <button id="us-submit-btn">Submit for review</button>
+                    <p id="us-message" style="margin-top:10px; min-height:18px; font-size:0.82em;"></p>
+                </div>`;
+            main.appendChild(submitDiv);
+
+            document.getElementById('us-submit-btn').addEventListener('click', async () => {
+                const title = document.getElementById('us-title').value.trim();
+                const msgEl = document.getElementById('us-message');
+                if (!title) { msgEl.style.color='#cc8888'; msgEl.textContent='Title is required.'; return; }
+
+                const { data: me } = await sb.from('profiles').select('username').eq('id', session.user.id).single();
+
+                const { error } = await sb.from('product_submissions').insert({
+                    user_id:       session.user.id,
+                    username:      me?.username || null,
+                    title,
+                    description:   document.getElementById('us-desc').value.trim(),
+                    type:          document.getElementById('us-type').value,
+                    thumbnail_url: document.getElementById('us-thumb').value.trim() || null,
+                    download_url:  document.getElementById('us-url').value.trim() || null,
+                    approved:      false
+                });
+
+                if (error) {
+                    msgEl.style.color = '#cc8888'; msgEl.textContent = error.message;
+                } else {
+                    msgEl.style.color = '#668866'; msgEl.textContent = 'Submitted! Waiting for admin approval.';
+                    ['us-title','us-desc','us-thumb','us-url'].forEach(id => document.getElementById(id).value = '');
+                }
+            });
+
+            // ---- Logout ----
             document.getElementById('logout-link').addEventListener('click', async (e) => {
                 e.preventDefault();
                 await sb.auth.signOut();

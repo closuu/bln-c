@@ -235,6 +235,13 @@
             </div>
 
             <!-- Sticky Note Approvals -->
+            <!-- User product submissions -->
+            <h3 style="margin-top: 40px; margin-bottom: 15px;">Catalogue Submissions</h3>
+            <p style="font-size:0.82em; color:#bbb; margin-bottom:14px;">Products submitted by users for review.</p>
+            <div id="product-submissions-list">
+                <p style="color:#bbb; font-size:0.82em;">Loading...</p>
+            </div>
+
             <h3 id="sticky-approvals" style="margin-top: 40px; margin-bottom: 15px;">Sticky Note Approvals</h3>
             <p style="font-size:0.82em; color:#bbb; margin-bottom:14px;">Review submitted drawings before they appear on the public wall.</p>
             <div id="pending-notes-list">
@@ -358,6 +365,7 @@
             loadStats();
             loadUsers();
             loadProducts();
+            loadProductSubmissions();
             loadPendingNotes();
 
 
@@ -611,6 +619,69 @@
                     loadStats();
                 }
             });
+
+            // ---- User catalogue submissions ----
+            async function loadProductSubmissions() {
+                const { data: subs } = await sb
+                    .from('product_submissions')
+                    .select('*')
+                    .eq('approved', false)
+                    .order('created_at', { ascending: false });
+
+                const list = document.getElementById('product-submissions-list');
+                if (!subs || subs.length === 0) {
+                    list.innerHTML = '<p style="color:#bbb; font-size:0.82em;">No pending submissions.</p>';
+                    return;
+                }
+
+                list.innerHTML = '';
+                subs.forEach(sub => {
+                    const card = document.createElement('div');
+                    card.className = 'pending-card';
+                    card.style.flexWrap = 'wrap';
+
+                    const thumb = sub.thumbnail_url
+                        ? `<img src="${sub.thumbnail_url}" style="width:80px;height:56px;object-fit:cover;border:1px solid #eee;flex-shrink:0;" onerror="this.style.display='none'">`
+                        : '<div style="width:80px;height:56px;background:#f5f3ef;border:1px dashed #ddd;flex-shrink:0;"></div>';
+
+                    card.innerHTML = `
+                        ${thumb}
+                        <div style="flex:1; min-width:180px;">
+                            <div style="font-size:0.72em; color:#bbb; letter-spacing:2px; margin-bottom:4px;">
+                                ${new Date(sub.created_at).toLocaleDateString()} — by ${sub.username || 'unknown'}
+                            </div>
+                            <div style="font-size:0.88em; color:#1a1a18; margin-bottom:2px;">${sub.title}</div>
+                            <div style="font-size:0.78em; color:#aaa;">${sub.description || ''}</div>
+                            <div style="font-size:0.7em; color:#ccc; margin-top:2px;">${sub.type}</div>
+                        </div>
+                        <div style="display:flex; gap:6px; align-items:center;">
+                            <button class="action-btn edit" onclick="approveSubmission('${sub.id}','${(sub.title||'').replace(/'/g,"\'")}','${(sub.description||'').replace(/'/g,"\'")}','${sub.type}','${sub.thumbnail_url||''}','${sub.download_url||''}')">Approve</button>
+                            <button class="action-btn delete-btn" onclick="rejectSubmission('${sub.id}')">Reject</button>
+                        </div>`;
+                    list.appendChild(card);
+                });
+            }
+
+            window.approveSubmission = async (id, title, desc, type, thumb, url) => {
+                // Add to products table
+                const { error } = await sb.from('products').insert({
+                    title, description: desc, type,
+                    thumbnail_url: thumb || null,
+                    download_url: url || null
+                });
+                if (error) { alert(error.message); return; }
+                // Remove from submissions
+                await sb.from('product_submissions').delete().eq('id', id);
+                loadProductSubmissions();
+                loadStats();
+                loadProducts();
+            };
+
+            window.rejectSubmission = async (id) => {
+                if (!confirm('Reject and delete this submission?')) return;
+                await sb.from('product_submissions').delete().eq('id', id);
+                loadProductSubmissions();
+            };
 
             // ---- Sticky note approvals ----
             async function loadPendingNotes() {
