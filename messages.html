@@ -25,6 +25,7 @@
                     <li><a href="wall.html">Sticky Wall</a></li>
                     <li><a href="messages.html">Messages</a></li>
                     <li><a href="gomoku.html">Gomoku</a></li>
+
                     <br>
                     <li><a href="login.html">Login</a></li>
                     <li><a href="register.html">Registration</a></li>
@@ -63,6 +64,8 @@
                         </div>
                         <div class="chat-header" id="chat-header" style="display:none;"></div>
                         <div class="chat-messages" id="chat-messages" style="display:none;"></div>
+                        <div id="reaction-bar" style="display:none; padding:6px 10px; border-top:1px solid #eee; background:#faf8f5; flex-wrap:wrap; gap:4px;">
+                        </div>
                         <div class="chat-input-row" id="chat-input-row" style="display:none;">
                             <input type="text" id="msg-input" placeholder="type a message...">
                             <button id="send-btn">Send</button>
@@ -146,10 +149,19 @@
     let activeConvId    = null;
     let pollInterval    = null;
     let onlineChannel   = null;
-    let onlineUsers     = new Set();   // track who is online
-    let profileCache    = {};          // cache profiles to avoid re-fetching
-    let unreadMap       = {};          // convId -> unread count
-    let lastSeenMap     = {};          // convId -> timestamp of last seen message
+    let onlineUsers     = new Set();
+    let profileCache    = {};
+    let unreadMap       = {};
+    let lastSeenMap     = {};
+
+    const REACTION_PRESETS = [
+        { label: ':Þ',           value: ':Þ' },
+        { label: '(ㅇㅡㅇ)',       value: '(ㅇㅡㅇ)' },
+        { label: '(˃ ⤙ ˂ )',     value: '(˃ ⤙ ˂ )' },
+        { label: '(╹ -╹)?',      value: '(╹ -╹)?' },
+        { label: '(ദ്ദി˙ᗜ˙)',     value: '(ദ്ദി˙ᗜ˙)' },
+        { label: '*n-word*',      value: 'notable person' },
+    ];
 
     function timeAgo(dateStr) {
         const diff = Date.now() - new Date(dateStr).getTime();
@@ -246,6 +258,45 @@
         document.getElementById('chat-header').style.display     = 'block';
         document.getElementById('chat-messages').style.display   = 'flex';
         document.getElementById('chat-input-row').style.display  = 'flex';
+
+        // Build reaction bar
+        const reactionBar = document.getElementById('reaction-bar');
+        reactionBar.style.display = 'flex';
+        reactionBar.innerHTML = '';
+        REACTION_PRESETS.forEach(preset => {
+            const btn = document.createElement('button');
+            btn.textContent = preset.label;
+            btn.style.cssText = 'font-size:0.78em; padding:3px 8px; letter-spacing:0; font-family:inherit;';
+            function applyBtnTheme(b) {
+                const mono = localStorage.getItem('theme') === 'monochrome';
+                b.style.background  = mono ? '#000' : '#fff';
+                b.style.color       = mono ? '#555' : '#888';
+                b.style.borderColor = mono ? '#333' : '#ddd';
+            }
+            applyBtnTheme(btn);
+            btn.addEventListener('mouseenter', () => { btn.style.background='#1a1a18'; btn.style.color='#f0ede8'; btn.style.borderColor='#1a1a18'; });
+            btn.addEventListener('mouseleave', () => applyBtnTheme(btn));
+            btn.addEventListener('click', () => {
+                const input = document.getElementById('msg-input');
+                input.value = preset.value;
+                input.focus();
+            });
+            reactionBar.appendChild(btn);
+        });
+
+        // Re-theme reaction bar on monochrome toggle
+        document.getElementById('theme-toggle')?.addEventListener('click', () => {
+            setTimeout(() => {
+                const mono = localStorage.getItem('theme') === 'monochrome';
+                reactionBar.style.background  = mono ? '#000'    : '#faf8f5';
+                reactionBar.style.borderColor = mono ? '#222'    : '#eee';
+                reactionBar.querySelectorAll('button').forEach(b => {
+                    b.style.background  = mono ? '#000' : '#fff';
+                    b.style.color       = mono ? '#555' : '#888';
+                    b.style.borderColor = mono ? '#333' : '#ddd';
+                });
+            }, 100);
+        });
 
         // Build chat header with avatar
         const cachedProfile = profileCache[partnerId] || partner;
