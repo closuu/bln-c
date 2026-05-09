@@ -1044,11 +1044,30 @@ body.monochrome-mode .game-card-thumb-placeholder {
     color: #333;
 }
 
+body.monochrome-mode .gomoku-panel-title {
+    color: #444;
+}
 
+body.monochrome-mode .player-name {
+    color: #ffffff;
+}
 
+body.monochrome-mode .player-record {
+    color: #555;
+}
 
+body.monochrome-mode .match-challenger {
+    color: #ffffff;
+}
 
+body.monochrome-mode .match-item {
+    color: #555;
+    border-color: #1a1a1a;
+}
 
+body.monochrome-mode .turn-indicator {
+    color: #aaa;
+}
 
 
 /* ============================================================
