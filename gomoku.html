@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gomoku - bln-c</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+    <style>
+        /* ---- Gomoku page styles ---- */
+        .gomoku-layout {
+            display: flex;
+            gap: 1px;
+            background: #ddd;
+            border: 1px solid #ddd;
+            margin-top: 16px;
+        }
+
+        /* Left panel */
+        .gomoku-sidebar {
+            width: 220px;
+            min-width: 220px;
+            background: #faf8f5;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .gomoku-panel {
+            padding: 14px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .gomoku-panel-title {
+            font-size: 0.62em;
+            color: #bbb;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        /* Player card */
+        .player-card {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: #fff;
+            border: 1px solid #e8e4de;
+            margin-bottom: 6px;
+        }
+
+        .player-card.active-turn {
+            border-color: #1a1a18;
+            background: #f0ede8;
+        }
+
+        .player-stone {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            border: 1px solid #ccc;
+        }
+
+        .player-stone.black { background: #1a1a18; border-color: #1a1a18; }
+        .player-stone.white { background: #fff; border-color: #999; box-shadow: inset 0 0 0 1px #ccc; }
+
+        .player-avatar-sm {
+            width: 28px;
+            height: 28px;
+            background: #1a1a18;
+            color: #f0ede8;
+            font-size: 0.75em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .player-avatar-sm img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .player-info { flex: 1; min-width: 0; }
+
+        .player-name {
+            font-size: 0.82em;
+            color: #1a1a18;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .player-record {
+            font-size: 0.65em;
+            color: #bbb;
+            letter-spacing: 1px;
+        }
+
+        .turn-indicator {
+            font-size: 0.6em;
+            color: #668866;
+            letter-spacing: 1px;
+        }
+
+        /* Ping display */
+        .ping-display {
+            font-size: 0.68em;
+            color: #bbb;
+            letter-spacing: 1px;
+            padding: 8px 14px;
+            border-bottom: 1px solid #eee;
+            background: #faf8f5;
+        }
+
+        .ping-dot {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #668866;
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+
+        .ping-dot.bad { background: #cc8888; }
+        .ping-dot.ok  { background: #cc9944; }
+
+        /* Match list */
+        .match-item {
+            padding: 10px 12px;
+            border-bottom: 1px solid #eee;
+            font-size: 0.78em;
+            color: #666;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .match-item:last-child { border-bottom: none; }
+
+        .match-challenger {
+            color: #1a1a18;
+            font-size: 0.9em;
+        }
+
+        /* Board area */
+        .board-area {
+            flex: 1;
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            min-height: 500px;
+        }
+
+        .board-status {
+            font-size: 0.82em;
+            color: #888;
+            letter-spacing: 2px;
+            margin-bottom: 16px;
+            text-align: center;
+            min-height: 20px;
+        }
+
+        #gomoku-board {
+            border: 2px solid #1a1a18;
+            cursor: crosshair;
+            display: block;
+            box-shadow: 3px 3px 0 #ccc;
+            background: #f5f0e0;
+            image-rendering: pixelated;
+            max-width: 100%;
+        }
+
+        #gomoku-board.disabled { cursor: not-allowed; opacity: 0.8; }
+
+        /* Challenge form */
+        .challenge-form {
+            background: #fff;
+            border: 1px solid #ddd;
+            padding: 16px;
+            margin-bottom: 16px;
+            max-width: 460px;
+        }
+
+        .challenge-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .challenge-row input {
+            flex: 1;
+            padding: 9px 12px;
+            background: #faf8f5;
+            border: 1px solid #ddd;
+            color: #1a1a18;
+            font-family: 'bitmap', monospace;
+            font-size: 0.88em;
+            outline: none;
+            transition: border-color 0.1s ease;
+            -webkit-font-smoothing: none;
+            font-smooth: never;
+        }
+
+        .challenge-row input:focus { border-color: #1a1a18; }
+        .challenge-row input::placeholder { color: #ccc; }
+
+        /* Win overlay */
+        .win-overlay {
+            display: none;
+            position: absolute;
+            inset: 0;
+            background: rgba(255,255,255,0.92);
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 14px;
+            z-index: 10;
+        }
+
+        .win-overlay.show { display: flex; }
+
+        .win-overlay h3 {
+            font-size: 1.6em;
+            color: #1a1a18;
+            letter-spacing: 3px;
+            text-transform: lowercase;
+            border: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .board-wrap {
+            position: relative;
+        }
+
+        /* Monochrome */
+        body.monochrome-mode .gomoku-layout { background: #222; border-color: #222; }
+        body.monochrome-mode .gomoku-sidebar { background: #0a0a0a; }
+        body.monochrome-mode .gomoku-panel { border-color: #1a1a1a; }
+        body.monochrome-mode .gomoku-panel-title { color: #333; }
+        body.monochrome-mode .player-card { background: #0a0a0a; border-color: #222; }
+        body.monochrome-mode .player-card.active-turn { background: #111; border-color: #fff; }
+        body.monochrome-mode .player-name { color: #fff; }
+        body.monochrome-mode .board-area { background: #0a0a0a; }
+        body.monochrome-mode #gomoku-board { border-color: #fff; box-shadow: 3px 3px 0 #333; background: #111; }
+        body.monochrome-mode .match-item { border-color: #1a1a1a; color: #555; }
+        body.monochrome-mode .match-challenger { color: #fff; }
+        body.monochrome-mode .ping-display { background: #0a0a0a; border-color: #1a1a1a; }
+        body.monochrome-mode .challenge-form { background: #0a0a0a; border-color: #222; }
+        body.monochrome-mode .challenge-row input { background: #000; border-color: #333; color: #fff; }
+        body.monochrome-mode .win-overlay { background: rgba(0,0,0,0.92); }
+        body.monochrome-mode .win-overlay h3 { color: #fff; }
+        body.monochrome-mode #menu-avatar { background: #fff; color: #000; box-shadow: 2px 2px 0 #333; }
+        body.monochrome-mode #menu-username { color: #fff; }
+        body.monochrome-mode #menu-record { color: #555; }
+        body.monochrome-mode [style*="background:#fff"][style*="border:1px solid #e8e4de"] {
+            background: #0a0a0a !important;
+            border-color: #333 !important;
+            border-left-color: #fff !important;
+        }
+
+        @media (max-width: 768px) {
+            .gomoku-layout { flex-direction: column; }
+            .gomoku-sidebar { width: 100%; min-width: unset; flex-direction: row; flex-wrap: wrap; }
+            .gomoku-panel { flex: 1; min-width: 160px; }
+            .board-area { padding: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <button id="nav-toggle" aria-label="Toggle navigation"><span></span><span></span><span></span></button>
+    <div id="nav-overlay"></div>
+
+    <header><h1>bln-c - gomoku</h1></header>
+
+    <div class="container">
+        <aside>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="games.html">Catalogue</a></li>
+                    <li><a href="tracker.html">mini notepad</a></li>
+                    <li><a href="devlog.html">Devlog</a></li>
+                    <li><a href="rate.html">Rate My Week</a></li>
+                    <li><a href="wall.html">Sticky Wall</a></li>
+                    <li><a href="messages.html">Messages</a></li>
+                    <li><a href="gomoku.html">Gomoku</a></li>
+                    <br>
+                    <li><a href="login.html">Login</a></li>
+                    <li><a href="register.html">Registration</a></li>
+                </ul>
+            </nav>
+            <button id="theme-toggle">Toggle Monochrome</button>
+        </aside>
+
+        <main>
+            <h2>Gomoku</h2>
+            <p>Five in a row. Challenge someone by username.</p>
+
+            <!-- Not logged in -->
+            <div id="login-notice" style="display:none; background:#fff; border:1px solid #ddd; border-left:3px solid #1a1a18; padding:16px 20px; margin-bottom:20px;">
+                <p style="margin:0; color:#888;"><a href="login.html" style="color:#1a1a18;">Log in</a> to play Gomoku.</p>
+            </div>
+
+            <!-- Game UI -->
+            <div id="game-ui" style="display:none;">
+
+                <!-- My profile card -->
+                <div style="display:flex; align-items:center; gap:14px; background:#fff; border:1px solid #e8e4de; border-left:3px solid #1a1a18; padding:14px 18px; margin-bottom:16px; max-width:460px;">
+                    <div id="menu-avatar" style="width:48px; height:48px; background:#1a1a18; color:#f0ede8; font-size:1.2em; display:flex; align-items:center; justify-content:center; flex-shrink:0; overflow:hidden; box-shadow:2px 2px 0 #ccc;">?</div>
+                    <div style="flex:1;">
+                        <div id="menu-username" style="font-size:0.95em; color:#1a1a18; margin-bottom:4px;">—</div>
+                        <div id="menu-record" style="font-size:0.72em; color:#bbb; letter-spacing:1px;">W0 L0</div>
+                    </div>
+                    <div style="font-size:0.65em; color:#ccc; letter-spacing:2px; text-transform:uppercase;">my stats</div>
+                </div>
+
+                <!-- Challenge form -->
+                <div class="challenge-form" id="challenge-section">
+                    <p class="gomoku-panel-title" style="margin-bottom:10px;">Challenge a player</p>
+                    <div class="challenge-row">
+                        <input type="text" id="challenge-username" placeholder="enter username...">
+                        <button id="challenge-btn">Challenge</button>
+                    </div>
+                    <p id="challenge-msg" style="font-size:0.8em; margin-top:8px; min-height:18px;"></p>
+                </div>
+
+                <!-- Stats toggle -->
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; font-size:0.8em; color:#888;">
+                    <input type="checkbox" id="show-stats-toggle" checked style="accent-color:#1a1a18; cursor:pointer;">
+                    <label for="show-stats-toggle">Show my win/loss record to opponents</label>
+                </div>
+
+                <!-- Main layout -->
+                <div class="gomoku-layout" id="game-layout" style="display:none;">
+
+                    <!-- Sidebar -->
+                    <div class="gomoku-sidebar">
+                        <div class="ping-display">
+                            <span class="ping-dot" id="ping-dot"></span>
+                            <span id="ping-ms">— ms</span>
+                        </div>
+
+                        <!-- Players -->
+                        <div class="gomoku-panel">
+                            <div class="gomoku-panel-title">players</div>
+                            <div class="player-card" id="card-black">
+                                <div class="player-stone black"></div>
+                                <div class="player-avatar-sm" id="avatar-black">?</div>
+                                <div class="player-info">
+                                    <div class="player-name" id="name-black">—</div>
+                                    <div class="player-record" id="record-black"></div>
+                                    <div class="turn-indicator" id="turn-black" style="display:none;">your turn</div>
+                                </div>
+                            </div>
+                            <div class="player-card" id="card-white">
+                                <div class="player-stone white"></div>
+                                <div class="player-avatar-sm" id="avatar-white">?</div>
+                                <div class="player-info">
+                                    <div class="player-name" id="name-white">—</div>
+                                    <div class="player-record" id="record-white"></div>
+                                    <div class="turn-indicator" id="turn-white" style="display:none;">your turn</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Incoming challenges -->
+                        <div class="gomoku-panel" style="flex:1;">
+                            <div class="gomoku-panel-title">incoming challenges</div>
+                            <div id="challenges-list">
+                                <p style="font-size:0.75em; color:#ccc;">none yet</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Board -->
+                    <div class="board-area">
+                        <div class="board-status" id="board-status">waiting for opponent...</div>
+                        <div class="board-wrap">
+                            <canvas id="gomoku-board" width="450" height="450"></canvas>
+                            <div class="win-overlay" id="win-overlay">
+                                <h3 id="win-text">—</h3>
+                                <button id="rematch-btn">New game</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <footer><p>&copy; 2026 - gonda Appdev Lab</p></footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/script.js"></script>
+    <script>
+    // ============================================================
+    //  GOMOKU — real-time multiplayer via Supabase Realtime
+    // ============================================================
+
+    const BOARD_SIZE  = 15;
+    const CELL        = 30;       // px per cell
+    const STONE_R     = 12;       // stone radius
+    const CANVAS_SIZE = CELL * (BOARD_SIZE - 1) + CELL; // 450
+
+    const canvas = document.getElementById('gomoku-board');
+    const ctx    = canvas.getContext('2d');
+
+    let myId       = null;
+    let myUsername = null;
+    let myProfile  = null;
+    let gameId     = null;
+    let myColor    = null;   // 'black' | 'white'
+    let board      = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(null));
+    let currentTurn = 'black';
+    let gameOver   = false;
+    let channel    = null;
+    let pingStart  = null;
+    let pingInterval = null;
+    let challengeChannel = null;
+
+    // ---- Drawing ----
+    function drawBoard() {
+        const mono = document.body.classList.contains('monochrome-mode');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Background
+        ctx.fillStyle = mono ? '#111' : '#f5f0e0';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Grid lines
+        ctx.strokeStyle = mono ? '#333' : '#c8b89a';
+        ctx.lineWidth = 0.8;
+        for (let i = 0; i < BOARD_SIZE; i++) {
+            const x = CELL / 2 + i * CELL;
+            const y = CELL / 2 + i * CELL;
+            ctx.beginPath(); ctx.moveTo(x, CELL / 2); ctx.lineTo(x, canvas.height - CELL / 2); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(CELL / 2, y); ctx.lineTo(canvas.width - CELL / 2, y); ctx.stroke();
+        }
+
+        // Star points (standard gomoku dots)
+        const stars = [[3,3],[3,11],[7,7],[11,3],[11,11]];
+        ctx.fillStyle = mono ? '#555' : '#a09070';
+        stars.forEach(([r, c]) => {
+            ctx.beginPath();
+            ctx.arc(CELL / 2 + c * CELL, CELL / 2 + r * CELL, 3, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        // Stones
+        for (let r = 0; r < BOARD_SIZE; r++) {
+            for (let c = 0; c < BOARD_SIZE; c++) {
+                if (board[r][c]) drawStone(r, c, board[r][c], mono);
+            }
+        }
+    }
+
+    function drawStone(r, c, color, mono) {
+        const x = CELL / 2 + c * CELL;
+        const y = CELL / 2 + r * CELL;
+        ctx.beginPath();
+        ctx.arc(x, y, STONE_R, 0, Math.PI * 2);
+
+        if (color === 'black') {
+            const grad = ctx.createRadialGradient(x - 3, y - 3, 1, x, y, STONE_R);
+            grad.addColorStop(0, mono ? '#555' : '#444');
+            grad.addColorStop(1, mono ? '#000' : '#111');
+            ctx.fillStyle = grad;
+        } else {
+            const grad = ctx.createRadialGradient(x - 3, y - 3, 1, x, y, STONE_R);
+            grad.addColorStop(0, '#fff');
+            grad.addColorStop(1, mono ? '#aaa' : '#ccc');
+            ctx.fillStyle = grad;
+        }
+
+        ctx.fill();
+        ctx.strokeStyle = mono ? '#fff' : (color === 'black' ? '#111' : '#aaa');
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+    }
+
+    function posFromEvent(e) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width  / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const px = (e.clientX - rect.left) * scaleX;
+        const py = (e.clientY - rect.top)  * scaleY;
+        const c  = Math.round((px - CELL / 2) / CELL);
+        const r  = Math.round((py - CELL / 2) / CELL);
+        if (r < 0 || r >= BOARD_SIZE || c < 0 || c >= BOARD_SIZE) return null;
+        return { r, c };
+    }
+
+    // ---- Win check ----
+    function checkWin(r, c, color) {
+        const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+        for (const [dr, dc] of dirs) {
+            let count = 1;
+            for (let i = 1; i < 5; i++) {
+                const nr = r + dr * i, nc = c + dc * i;
+                if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE || board[nr][nc] !== color) break;
+                count++;
+            }
+            for (let i = 1; i < 5; i++) {
+                const nr = r - dr * i, nc = c - dc * i;
+                if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE || board[nr][nc] !== color) break;
+                count++;
+            }
+            if (count >= 5) return true;
+        }
+        return false;
+    }
+
+    // ---- Profile display ----
+    function setPlayerUI(side, profile, showRecord) {
+        const nameEl   = document.getElementById(`name-${side}`);
+        const recEl    = document.getElementById(`record-${side}`);
+        const avatarEl = document.getElementById(`avatar-${side}`);
+
+        nameEl.textContent = profile.username || '—';
+
+        if (showRecord && profile.gomoku_show_record !== false) {
+            const w = profile.gomoku_wins   || 0;
+            const l = profile.gomoku_losses || 0;
+            recEl.textContent = `W${w} L${l}`;
+        } else {
+            recEl.textContent = '';
+        }
+
+        if (profile.avatar_url) {
+            avatarEl.innerHTML = `<img src="${profile.avatar_url}" alt="">`;
+        } else {
+            avatarEl.textContent = (profile.username || '?')[0].toUpperCase();
+        }
+    }
+
+    function updateTurnUI() {
+        ['black','white'].forEach(side => {
+            const card = document.getElementById(`card-${side}`);
+            const turn = document.getElementById(`turn-${side}`);
+            if (currentTurn === side) {
+                card.classList.add('active-turn');
+                // Only show "your turn" if that side is you
+                if (myColor === side) turn.style.display = 'block';
+            } else {
+                card.classList.remove('active-turn');
+                turn.style.display = 'none';
+            }
+        });
+
+        if (!gameOver) {
+            const isMyTurn = myColor === currentTurn;
+            canvas.classList.toggle('disabled', !isMyTurn);
+            document.getElementById('board-status').textContent = isMyTurn
+                ? 'your turn — place a stone'
+                : `waiting for opponent...`;
+        }
+    }
+
+    // ---- Ping ----
+    function startPing() {
+        if (pingInterval) clearInterval(pingInterval);
+        pingInterval = setInterval(async () => {
+            if (!channel) return;
+            pingStart = Date.now();
+            channel.send({ type: 'broadcast', event: 'ping', payload: { from: myId } });
+        }, 3000);
+    }
+
+    function updatePingDisplay(ms) {
+        const dot = document.getElementById('ping-dot');
+        document.getElementById('ping-ms').textContent = ms + ' ms';
+        dot.className = 'ping-dot' + (ms < 100 ? '' : ms < 300 ? ' ok' : ' bad');
+    }
+
+    // ---- Realtime channel ----
+    function joinGameChannel(gId) {
+        if (channel) channel.unsubscribe();
+
+        channel = sb.channel(`game:${gId}`, {
+            config: { broadcast: { self: false } }
+        });
+
+        channel
+            .on('broadcast', { event: 'move' }, ({ payload }) => {
+                if (payload.board) {
+                    board = payload.board;
+                    currentTurn = payload.turn;
+                    drawBoard();
+                    updateTurnUI();
+                }
+                if (payload.winner) handleWin(payload.winner, false);
+            })
+            .on('broadcast', { event: 'ping' }, ({ payload }) => {
+                if (payload.from !== myId) {
+                    channel.send({ type: 'broadcast', event: 'pong', payload: { to: payload.from } });
+                }
+            })
+            .on('broadcast', { event: 'pong' }, () => {
+                if (pingStart) updatePingDisplay(Date.now() - pingStart);
+            })
+            .on('broadcast', { event: 'rematch' }, () => {
+                resetBoard();
+            })
+            .subscribe();
+
+        startPing();
+    }
+
+    // ---- Place stone ----
+    canvas.addEventListener('click', async (e) => {
+        if (gameOver || !gameId || myColor !== currentTurn) return;
+        const pos = posFromEvent(e);
+        if (!pos || board[pos.r][pos.c]) return;
+
+        board[pos.r][pos.c] = myColor;
+        const won = checkWin(pos.r, pos.c, myColor);
+        currentTurn = currentTurn === 'black' ? 'white' : 'black';
+
+        drawBoard();
+        updateTurnUI();
+
+        // Broadcast move
+        await channel.send({
+            type: 'broadcast', event: 'move',
+            payload: { board, turn: currentTurn, winner: won ? myColor : null }
+        });
+
+        // Save to DB
+        await sb.from('gomoku_games').update({
+            board:        JSON.stringify(board),
+            current_turn: currentTurn,
+            status:       won ? 'finished' : 'playing',
+            winner:       won ? myId : null,
+            updated_at:   new Date().toISOString()
+        }).eq('id', gameId);
+
+        if (won) handleWin(myColor, true);
+    });
+
+    async function handleWin(winnerColor, isMe) {
+        gameOver = true;
+        canvas.classList.add('disabled');
+
+        const winnerName = winnerColor === myColor
+            ? myUsername
+            : document.getElementById(`name-${winnerColor}`).textContent;
+
+        document.getElementById('win-text').textContent =
+            winnerColor === myColor ? 'you win!' : winnerName + ' wins!';
+        document.getElementById('win-overlay').classList.add('show');
+        document.getElementById('board-status').textContent = 'game over';
+
+        // Update win/loss records
+        if (isMe) {
+            const newWins = (myProfile.gomoku_wins || 0) + 1;
+            await sb.from('profiles').update({ gomoku_wins: newWins }).eq('id', myId);
+            myProfile.gomoku_wins = newWins;
+            // Update menu record display
+            const l = myProfile.gomoku_losses || 0;
+            document.getElementById('menu-record').textContent = `W${newWins}  L${l}  —  ${newWins + l} games played`;
+
+            // Update opponent losses
+            const { data: gameRow, error: gameErr } = await sb.from('gomoku_games').select('*').eq('id', gameId).single();
+            if (!gameErr && gameRow) {
+                const oppId = gameRow.black_player === myId ? gameRow.white_player : gameRow.black_player;
+                if (oppId) {
+                    const { data: opp } = await sb.from('profiles').select('gomoku_losses').eq('id', oppId).single();
+                    await sb.from('profiles').update({ gomoku_losses: (opp?.gomoku_losses || 0) + 1 }).eq('id', oppId);
+                }
+            }
+        } else {
+            // I lost — update my loss count
+            const newLosses = (myProfile.gomoku_losses || 0) + 1;
+            await sb.from('profiles').update({ gomoku_losses: newLosses }).eq('id', myId);
+            myProfile.gomoku_losses = newLosses;
+            const w = myProfile.gomoku_wins || 0;
+            document.getElementById('menu-record').textContent = `W${w}  L${newLosses}  —  ${w + newLosses} games played`;
+        }
+    }
+
+    function resetBoard() {
+        board = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(null));
+        currentTurn = 'black';
+        gameOver    = false;
+        document.getElementById('win-overlay').classList.remove('show');
+        canvas.classList.remove('disabled');
+        drawBoard();
+        updateTurnUI();
+
+        // Reset in DB
+        sb.from('gomoku_games').update({
+            board: JSON.stringify(board),
+            current_turn: 'black',
+            status: 'playing',
+            winner: null,
+            updated_at: new Date().toISOString()
+        }).eq('id', gameId);
+    }
+
+    document.getElementById('rematch-btn').addEventListener('click', async () => {
+        resetBoard();
+        await channel.send({ type: 'broadcast', event: 'rematch', payload: {} });
+    });
+
+    // ---- Challenge system ----
+    function listenForChallenges() {
+        challengeChannel = sb.channel(`challenges:${myId}`)
+            .on('broadcast', { event: 'challenge' }, ({ payload }) => {
+                addIncomingChallenge(payload);
+            })
+            .subscribe();
+    }
+
+    function addIncomingChallenge(payload) {
+        const list = document.getElementById('challenges-list');
+        // Remove placeholder
+        list.querySelectorAll('p').forEach(p => p.remove());
+
+        const item = document.createElement('div');
+        item.className = 'match-item';
+        item.innerHTML = `
+            <span class="match-challenger">${payload.fromUsername}</span>
+            <div style="display:flex; gap:4px;">
+                <button class="action-btn edit" style="font-size:0.65em; padding:3px 7px;"
+                    onclick="acceptChallenge('${payload.gameId}', '${payload.fromId}', '${payload.fromUsername}', this.closest('.match-item'))">
+                    Accept
+                </button>
+                <button class="action-btn delete-btn" style="font-size:0.65em; padding:3px 7px;"
+                    onclick="this.closest('.match-item').remove()">
+                    Decline
+                </button>
+            </div>`;
+        list.prepend(item);
+    }
+
+    window.acceptChallenge = async (gId, oppId, oppUsername, itemEl) => {
+        itemEl.remove();
+        gameId      = gId;
+        myColor     = 'white';
+        board       = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(null));
+        currentTurn = 'black';
+        gameOver    = false;
+
+        // Load opponent profile
+        const { data: oppProfile } = await sb.from('profiles').select('*').eq('id', oppId).single();
+        setPlayerUI('black', oppProfile, true);
+        setPlayerUI('white', myProfile, document.getElementById('show-stats-toggle').checked);
+
+        // Update game row — set white player + status playing
+        await sb.from('gomoku_games').update({
+            white_player: myId,
+            status:       'playing',
+            updated_at:   new Date().toISOString()
+        }).eq('id', gId);
+
+        // Notify black player that white has joined via broadcast
+        const notifyChannel = sb.channel(`game_accept:${gId}`);
+        await notifyChannel.subscribe(async (status) => {
+            if (status === 'SUBSCRIBED') {
+                await notifyChannel.send({
+                    type: 'broadcast', event: 'accepted',
+                    payload: { whiteId: myId, whiteUsername: myUsername, whiteProfile: myProfile }
+                });
+                notifyChannel.unsubscribe();
+            }
+        });
+
+        document.getElementById('game-layout').style.display = 'flex';
+        drawBoard();
+        updateTurnUI();
+        joinGameChannel(gId);
+    };
+
+    document.getElementById('challenge-btn').addEventListener('click', async () => {
+        const targetUsername = document.getElementById('challenge-username').value.trim();
+        const msgEl = document.getElementById('challenge-msg');
+
+        if (!targetUsername) { msgEl.style.color='#cc8888'; msgEl.textContent='Enter a username.'; return; }
+        if (targetUsername === myUsername) { msgEl.style.color='#cc8888'; msgEl.textContent="Can't challenge yourself."; return; }
+
+        const { data: target } = await sb.from('profiles').select('id, username').eq('username', targetUsername).single();
+        if (!target) { msgEl.style.color='#cc8888'; msgEl.textContent='User not found.'; return; }
+
+        // Create game row
+        const { data: game } = await sb.from('gomoku_games').insert({
+            black_player: myId,
+            white_player: null,
+            board: JSON.stringify(Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(null))),
+            current_turn: 'black',
+            status: 'waiting'
+        }).select().single();
+
+        gameId  = game.id;
+        myColor = 'black';
+
+        // Send challenge via realtime
+        const targetChannel = sb.channel(`challenges:${target.id}`);
+        await targetChannel.subscribe(async (status) => {
+            if (status === 'SUBSCRIBED') {
+                await targetChannel.send({
+                    type: 'broadcast', event: 'challenge',
+                    payload: { gameId: game.id, fromId: myId, fromUsername: myUsername }
+                });
+                targetChannel.unsubscribe();
+            }
+        });
+
+        setPlayerUI('black', myProfile, document.getElementById('show-stats-toggle').checked);
+        document.getElementById('name-white').textContent = target.username;
+        document.getElementById('record-white').textContent = '';
+
+        document.getElementById('game-layout').style.display = 'flex';
+        document.getElementById('board-status').textContent = 'challenge sent, waiting for ' + target.username + '...';
+        canvas.classList.add('disabled');
+        drawBoard();
+
+        msgEl.style.color = '#668866';
+        msgEl.textContent = 'Challenge sent to ' + target.username + '!';
+
+        // Listen for opponent accepting
+        const acceptListener = sb.channel(`game_accept:${game.id}`)
+            .on('broadcast', { event: 'accepted' }, async ({ payload }) => {
+                // Load opponent's full profile
+                const { data: oppProfile } = await sb.from('profiles').select('*').eq('id', payload.whiteId).single();
+                setPlayerUI('white', oppProfile || { username: payload.whiteUsername }, true);
+                canvas.classList.remove('disabled');
+                document.getElementById('board-status').textContent = 'your turn — place a stone';
+                updateTurnUI();
+                acceptListener.unsubscribe();
+            })
+            .subscribe();
+
+        joinGameChannel(game.id);
+    });
+
+    // Redraw board on monochrome toggle
+    document.getElementById('theme-toggle')?.addEventListener('click', () => {
+        setTimeout(() => drawBoard(), 80);
+    });
+
+    // ---- Init ----
+    (async () => {
+        const { data: { session } } = await sb.auth.getSession();
+
+        if (!session) {
+            document.getElementById('login-notice').style.display = 'block';
+            return;
+        }
+
+        myId = session.user.id;
+        document.getElementById('game-ui').style.display = 'block';
+
+        const { data: profile } = await sb.from('profiles').select('*').eq('id', myId).single();
+        myProfile  = profile;
+        myUsername = profile?.username;
+
+        // Populate menu profile card
+        const menuAvatar = document.getElementById('menu-avatar');
+        if (profile?.avatar_url) {
+            menuAvatar.innerHTML = `<img src="${profile.avatar_url}" style="width:100%;height:100%;object-fit:cover;" alt="">`;
+        } else {
+            menuAvatar.textContent = (profile?.username || '?')[0].toUpperCase();
+        }
+        document.getElementById('menu-username').textContent = profile?.username || '—';
+        const w = profile?.gomoku_wins   || 0;
+        const l = profile?.gomoku_losses || 0;
+        document.getElementById('menu-record').textContent = `W${w}  L${l}  —  ${w + l} games played`;
+
+        // Sync show-stats toggle with saved preference
+        document.getElementById('show-stats-toggle').checked = profile?.gomoku_show_record !== false;
+
+        document.getElementById('show-stats-toggle').addEventListener('change', async (e) => {
+            await sb.from('profiles').update({ gomoku_show_record: e.target.checked }).eq('id', myId);
+        });
+
+        drawBoard();
+        listenForChallenges();
+    })();
+    </script>
+    <script>
+        (function () {
+            var toggle  = document.getElementById('nav-toggle');
+            var overlay = document.getElementById('nav-overlay');
+            var sidebar = document.querySelector('aside');
+            if (!toggle || !sidebar) return;
+            function openNav()  { toggle.classList.add('open'); sidebar.classList.add('open'); overlay.classList.add('open'); document.body.style.overflow = 'hidden'; }
+            function closeNav() { toggle.classList.remove('open'); sidebar.classList.remove('open'); overlay.classList.remove('open'); document.body.style.overflow = ''; }
+            toggle.addEventListener('click', function () { sidebar.classList.contains('open') ? closeNav() : openNav(); });
+            overlay.addEventListener('click', closeNav);
+            sidebar.querySelectorAll('a').forEach(function (a) { a.addEventListener('click', closeNav); });
+        })();
+    </script>
+</body>
+</html>
