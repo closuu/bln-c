@@ -1695,3 +1695,7 @@ body.monochrome-mode .new-conv-row input { background: #000; border-color: #333;
     .chat-area { min-height: 320px; }
     .msg-bubble { max-width: 88%; }
 }
+
+body.monochrome-mode #menu-username {
+    color: #ffffff !important;
+}
