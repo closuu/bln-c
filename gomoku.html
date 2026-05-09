@@ -267,6 +267,23 @@
             border-left-color: #fff !important;
         }
 
+        /* Public games list */
+        #public-games-list .pub-game-item {
+            padding: 9px 12px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.78em;
+            color: #666;
+        }
+        #public-games-list .pub-game-item:last-child { border-bottom: none; }
+        #public-games-list .pub-game-host { color: #1a1a18; }
+        body.monochrome-mode #public-games-list { border-color: #222; background: #0a0a0a; }
+        body.monochrome-mode #public-games-list .pub-game-item { border-color: #1a1a1a; color: #555; }
+        body.monochrome-mode #public-games-list .pub-game-host { color: #fff; }
+        body.monochrome-mode #public-match-section { background: #0a0a0a; border-color: #222; }
+
         @media (max-width: 768px) {
             .gomoku-layout { flex-direction: column; }
             .gomoku-sidebar { width: 100%; min-width: unset; flex-direction: row; flex-wrap: wrap; }
@@ -323,9 +340,23 @@
                     <div style="font-size:0.65em; color:#ccc; letter-spacing:2px; text-transform:uppercase;">my stats</div>
                 </div>
 
+                <!-- Public matchmaking -->
+                <div class="challenge-form" id="public-match-section" style="margin-bottom:10px;">
+                    <p class="gomoku-panel-title" style="margin-bottom:10px;">Quick public match</p>
+                    <p style="font-size:0.78em; color:#bbb; margin-bottom:10px;">Host a game and wait for anyone to join, or join an open game.</p>
+                    <div style="display:flex; gap:8px; margin-bottom:10px;">
+                        <button id="host-public-btn" style="flex:1; font-size:0.78em;">Host a game</button>
+                        <button id="refresh-public-btn" style="font-size:0.78em; padding:8px 12px; background:transparent; border-color:#ccc; color:#888;">↺</button>
+                    </div>
+                    <div id="public-games-list" style="border:1px solid #eee; min-height:48px;">
+                        <p style="padding:10px 12px; font-size:0.75em; color:#ccc;">Loading open games...</p>
+                    </div>
+                    <p id="public-match-msg" style="font-size:0.8em; margin-top:8px; min-height:18px;"></p>
+                </div>
+
                 <!-- Challenge form -->
                 <div class="challenge-form" id="challenge-section">
-                    <p class="gomoku-panel-title" style="margin-bottom:10px;">Challenge a player</p>
+                    <p class="gomoku-panel-title" style="margin-bottom:10px;">Challenge by username</p>
                     <div class="challenge-row">
                         <input type="text" id="challenge-username" placeholder="enter username...">
                         <button id="challenge-btn">Challenge</button>
@@ -384,6 +415,9 @@
                     <!-- Board -->
                     <div class="board-area">
                         <div class="board-status" id="board-status">waiting for opponent...</div>
+                        <div id="resign-wrap" style="display:none; margin-bottom:8px;">
+                            <button id="resign-btn" style="font-size:0.72em; padding:4px 12px; background:transparent; border-color:#ccc; color:#aaa;">Resign</button>
+                        </div>
                         <div class="board-wrap">
                             <canvas id="gomoku-board" width="450" height="450"></canvas>
                             <div class="win-overlay" id="win-overlay">
@@ -593,7 +627,8 @@
         channel
             .on('broadcast', { event: 'move' }, ({ payload }) => {
                 if (payload.board) {
-                    board = payload.board;
+                    // board is already a parsed JS array from broadcast
+                    board = Array.isArray(payload.board) ? payload.board : JSON.parse(payload.board);
                     currentTurn = payload.turn;
                     drawBoard();
                     updateTurnUI();
@@ -608,13 +643,64 @@
             .on('broadcast', { event: 'pong' }, () => {
                 if (pingStart) updatePingDisplay(Date.now() - pingStart);
             })
-            .on('broadcast', { event: 'rematch' }, () => {
+            .on('broadcast', { event: 'rematch' }, ({ payload }) => {
+                if (payload?.swapColors) myColor = myColor === 'black' ? 'white' : 'black';
                 resetBoard();
+                document.getElementById('resign-wrap').style.display = 'block';
+            })
+            .on('broadcast', { event: 'resign' }, ({ payload }) => {
+                // Opponent resigned — I win
+                if (!gameOver) {
+                    gameOver = true;
+                    canvas.classList.add('disabled');
+                    document.getElementById('win-text').textContent = 'opponent resigned. you win!';
+                    document.getElementById('win-overlay').classList.add('show');
+                    document.getElementById('board-status').textContent = 'game over';
+                    document.getElementById('resign-wrap').style.display = 'none';
+                    // Update my wins
+                    const newWins = (myProfile.gomoku_wins || 0) + 1;
+                    sb.from('profiles').update({ gomoku_wins: newWins }).eq('id', myId);
+                    myProfile.gomoku_wins = newWins;
+                    const l = myProfile.gomoku_losses || 0;
+                    document.getElementById('menu-record').textContent = `W${newWins}  L${l}  —  ${newWins + l} games played`;
+                }
             })
             .subscribe();
 
         startPing();
+
+        // Show resign button
+        document.getElementById('resign-wrap').style.display = 'block';
     }
+
+    // Resign button
+    document.getElementById('resign-btn')?.addEventListener('click', async () => {
+        if (gameOver || !channel) return;
+        if (!confirm('Resign this game? It counts as a loss.')) return;
+
+        gameOver = true;
+        canvas.classList.add('disabled');
+        document.getElementById('resign-wrap').style.display = 'none';
+
+        await channel.send({ type: 'broadcast', event: 'resign', payload: { from: myId } });
+
+        // Update my losses
+        const newLosses = (myProfile.gomoku_losses || 0) + 1;
+        await sb.from('profiles').update({ gomoku_losses: newLosses }).eq('id', myId);
+        myProfile.gomoku_losses = newLosses;
+        const w = myProfile.gomoku_wins || 0;
+        document.getElementById('menu-record').textContent = `W${w}  L${newLosses}  —  ${w + newLosses} games played`;
+
+        // Mark game as finished in DB
+        await sb.from('gomoku_games').update({
+            status: 'finished',
+            updated_at: new Date().toISOString()
+        }).eq('id', gameId);
+
+        document.getElementById('win-text').textContent = 'you resigned.';
+        document.getElementById('win-overlay').classList.add('show');
+        document.getElementById('board-status').textContent = 'game over';
+    });
 
     // ---- Place stone ----
     canvas.addEventListener('click', async (e) => {
@@ -660,26 +746,16 @@
         document.getElementById('win-overlay').classList.add('show');
         document.getElementById('board-status').textContent = 'game over';
 
-        // Update win/loss records
+        // Each player updates only their own record to avoid RLS issues
         if (isMe) {
+            // I won — update my wins
             const newWins = (myProfile.gomoku_wins || 0) + 1;
             await sb.from('profiles').update({ gomoku_wins: newWins }).eq('id', myId);
             myProfile.gomoku_wins = newWins;
-            // Update menu record display
             const l = myProfile.gomoku_losses || 0;
             document.getElementById('menu-record').textContent = `W${newWins}  L${l}  —  ${newWins + l} games played`;
-
-            // Update opponent losses
-            const { data: gameRow, error: gameErr } = await sb.from('gomoku_games').select('*').eq('id', gameId).single();
-            if (!gameErr && gameRow) {
-                const oppId = gameRow.black_player === myId ? gameRow.white_player : gameRow.black_player;
-                if (oppId) {
-                    const { data: opp } = await sb.from('profiles').select('gomoku_losses').eq('id', oppId).single();
-                    await sb.from('profiles').update({ gomoku_losses: (opp?.gomoku_losses || 0) + 1 }).eq('id', oppId);
-                }
-            }
         } else {
-            // I lost — update my loss count
+            // I lost — update my losses
             const newLosses = (myProfile.gomoku_losses || 0) + 1;
             await sb.from('profiles').update({ gomoku_losses: newLosses }).eq('id', myId);
             myProfile.gomoku_losses = newLosses;
@@ -708,8 +784,11 @@
     }
 
     document.getElementById('rematch-btn').addEventListener('click', async () => {
+        // Swap colors for fairness
+        myColor = myColor === 'black' ? 'white' : 'black';
         resetBoard();
-        await channel.send({ type: 'broadcast', event: 'rematch', payload: {} });
+        document.getElementById('resign-wrap').style.display = 'block';
+        await channel.send({ type: 'broadcast', event: 'rematch', payload: { swapColors: true } });
     });
 
     // ---- Challenge system ----
@@ -722,12 +801,21 @@
     }
 
     function addIncomingChallenge(payload) {
+        // Hard block: never show a challenge from yourself (mutual challenge race)
+        if (!payload.fromId || payload.fromId === myId) return;
+
         const list = document.getElementById('challenges-list');
-        // Remove placeholder
         list.querySelectorAll('p').forEach(p => p.remove());
+
+        // Avoid duplicate challenge cards from same person
+        const existingCards = list.querySelectorAll('.match-item[data-from-id]');
+        existingCards.forEach(card => {
+            if (card.dataset.fromId === payload.fromId) card.remove();
+        });
 
         const item = document.createElement('div');
         item.className = 'match-item';
+        item.dataset.fromId = payload.fromId;
         item.innerHTML = `
             <span class="match-challenger">${payload.fromUsername}</span>
             <div style="display:flex; gap:4px;">
@@ -745,6 +833,19 @@
 
     window.acceptChallenge = async (gId, oppId, oppUsername, itemEl) => {
         itemEl.remove();
+
+        // Guard: never accept a game where opponent is yourself
+        if (oppId === myId || gId === gameId) {
+            console.warn('Ignoring self-challenge or own game');
+            return;
+        }
+
+        // If we already sent a challenge, cancel our pending game first
+        if (gameId && gameId !== gId) {
+            await sb.from('gomoku_games').delete().eq('id', gameId).eq('black_player', myId).eq('status', 'waiting');
+            if (channel) { channel.unsubscribe(); channel = null; }
+        }
+
         gameId      = gId;
         myColor     = 'white';
         board       = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(null));
@@ -848,6 +949,146 @@
         setTimeout(() => drawBoard(), 80);
     });
 
+    // ---- Public matchmaking ----
+    let publicChannel = null;
+
+    async function loadPublicGames() {
+        const { data: games } = await sb
+            .from('gomoku_games')
+            .select('id, black_player, created_at')
+            .eq('status', 'waiting')
+            .eq('is_public', true)
+            .order('created_at', { ascending: false });
+
+        const list = document.getElementById('public-games-list');
+
+        if (!games || games.length === 0) {
+            list.innerHTML = '<p style="padding:10px 12px; font-size:0.75em; color:#ccc;">No open games right now.</p>';
+            return;
+        }
+
+        // Get host usernames
+        const hostIds = games.map(g => g.black_player).filter(Boolean);
+        const { data: profiles } = await sb.from('profiles').select('id, username').in('id', hostIds);
+        const profileMap = {};
+        (profiles || []).forEach(p => profileMap[p.id] = p);
+
+        list.innerHTML = '';
+        games.forEach(game => {
+            const host = profileMap[game.black_player];
+            if (!host || game.black_player === myId) return; // skip own hosted game
+
+            const item = document.createElement('div');
+            item.className = 'pub-game-item';
+            item.innerHTML = `
+                <span class="pub-game-host">${host.username}</span>
+                <button class="action-btn edit" style="font-size:0.65em; padding:3px 8px;"
+                    onclick="joinPublicGame('${game.id}', '${game.black_player}', '${host.username}', this)">
+                    Join
+                </button>`;
+            list.appendChild(item);
+        });
+
+        if (list.children.length === 0) {
+            list.innerHTML = '<p style="padding:10px 12px; font-size:0.75em; color:#ccc;">No open games right now.</p>';
+        }
+    }
+
+    window.joinPublicGame = async (gId, hostId, hostUsername, btn) => {
+        btn.disabled = true;
+        btn.textContent = '...';
+
+        gameId      = gId;
+        myColor     = 'white';
+        board       = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(null));
+        currentTurn = 'black';
+        gameOver    = false;
+
+        const { data: hostProfile } = await sb.from('profiles').select('*').eq('id', hostId).single();
+        setPlayerUI('black', hostProfile || { username: hostUsername }, true);
+        setPlayerUI('white', myProfile, document.getElementById('show-stats-toggle').checked);
+
+        await sb.from('gomoku_games').update({
+            white_player: myId,
+            status: 'playing',
+            updated_at: new Date().toISOString()
+        }).eq('id', gId);
+
+        // Notify host
+        const notifyChannel = sb.channel(`game_accept:${gId}`);
+        await notifyChannel.subscribe(async (status) => {
+            if (status === 'SUBSCRIBED') {
+                await notifyChannel.send({
+                    type: 'broadcast', event: 'accepted',
+                    payload: { whiteId: myId, whiteUsername: myUsername, whiteProfile: myProfile }
+                });
+                notifyChannel.unsubscribe();
+            }
+        });
+
+        document.getElementById('game-layout').style.display = 'flex';
+        drawBoard();
+        updateTurnUI();
+        joinGameChannel(gId);
+
+        document.getElementById('public-match-msg').style.color = '#668866';
+        document.getElementById('public-match-msg').textContent = 'Joined ' + hostUsername + "'s game!";
+    };
+
+    document.getElementById('host-public-btn').addEventListener('click', async () => {
+        const msgEl = document.getElementById('public-match-msg');
+
+        // Cancel any previous hosted game
+        await sb.from('gomoku_games')
+            .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+            .eq('black_player', myId).eq('status', 'waiting').eq('is_public', true);
+
+        const { data: game, error } = await sb.from('gomoku_games').insert({
+            black_player: myId,
+            white_player: null,
+            board: JSON.stringify(Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(null))),
+            current_turn: 'black',
+            status: 'waiting',
+            is_public: true
+        }).select().single();
+
+        if (error) { msgEl.style.color='#cc8888'; msgEl.textContent=error.message; return; }
+
+        gameId  = game.id;
+        myColor = 'black';
+
+        setPlayerUI('black', myProfile, document.getElementById('show-stats-toggle').checked);
+        document.getElementById('name-white').textContent = '—';
+        document.getElementById('record-white').textContent = '';
+        document.getElementById('avatar-white').textContent = '?';
+
+        document.getElementById('game-layout').style.display = 'flex';
+        document.getElementById('board-status').textContent = 'waiting for anyone to join...';
+        canvas.classList.add('disabled');
+        drawBoard();
+
+        msgEl.style.color = '#668866';
+        msgEl.textContent = 'Game hosted! Waiting for a player...';
+
+        // Listen for someone joining
+        const acceptListener = sb.channel(`game_accept:${game.id}`)
+            .on('broadcast', { event: 'accepted' }, async ({ payload }) => {
+                if (payload.whiteId === myId) return; // ignore self
+                const { data: oppProfile } = await sb.from('profiles').select('*').eq('id', payload.whiteId).single();
+                setPlayerUI('white', oppProfile || { username: payload.whiteUsername }, true);
+                canvas.classList.remove('disabled');
+                updateTurnUI();
+                acceptListener.unsubscribe();
+                loadPublicGames();
+            })
+            .subscribe();
+
+        joinGameChannel(game.id);
+        loadPublicGames();
+    });
+
+    document.getElementById('refresh-public-btn').addEventListener('click', loadPublicGames);
+
     // ---- Init ----
     (async () => {
         const { data: { session } } = await sb.auth.getSession();
@@ -885,6 +1126,7 @@
 
         drawBoard();
         listenForChallenges();
+        loadPublicGames();
     })();
     </script>
     <script>

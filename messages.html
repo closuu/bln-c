@@ -63,8 +63,6 @@
                         </div>
                         <div class="chat-header" id="chat-header" style="display:none;"></div>
                         <div class="chat-messages" id="chat-messages" style="display:none;"></div>
-                        <div id="reaction-bar" style="display:none; padding:6px 10px; border-top:1px solid #eee; background:#faf8f5; display:none; flex-wrap:wrap; gap:4px;">
-                        </div>
                         <div class="chat-input-row" id="chat-input-row" style="display:none;">
                             <input type="text" id="msg-input" placeholder="type a message...">
                             <button id="send-btn">Send</button>
@@ -77,6 +75,68 @@
 
     <footer><p>&copy; 2026 - gonda Appdev Lab</p></footer>
 
+    <style>
+        .conv-avatar {
+            width: 32px;
+            height: 32px;
+            background: #1a1a18;
+            color: #f0ede8;
+            font-size: 0.78em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            overflow: hidden;
+            position: relative;
+        }
+        .conv-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .online-dot {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #668866;
+            border: 1px solid #faf8f5;
+        }
+        .online-dot.offline { background: #ccc; }
+        .conv-item { display: flex; align-items: center; gap: 8px; }
+        .conv-item-text { flex: 1; min-width: 0; }
+        .unread-badge {
+            background: #1a1a18;
+            color: #f0ede8;
+            font-size: 0.58em;
+            padding: 1px 5px;
+            flex-shrink: 0;
+        }
+        .chat-header-inner {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .chat-header-avatar {
+            width: 26px;
+            height: 26px;
+            background: #1a1a18;
+            color: #f0ede8;
+            font-size: 0.7em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .chat-header-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .chat-header-status { font-size: 0.65em; color: #bbb; letter-spacing: 1px; }
+        .chat-header-status.online { color: #668866; }
+
+        body.monochrome-mode .conv-avatar { background: #fff; color: #000; }
+        body.monochrome-mode .online-dot { border-color: #0a0a0a; }
+        body.monochrome-mode .online-dot.offline { background: #333; }
+        body.monochrome-mode .unread-badge { background: #fff; color: #000; }
+        body.monochrome-mode .chat-header-avatar { background: #fff; color: #000; }
+    </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase-config.js"></script>
     <script src="js/script.js"></script>
@@ -85,15 +145,11 @@
     let currentUsername = null;
     let activeConvId    = null;
     let pollInterval    = null;
-
-    const REACTION_PRESETS = [
-        { label: ':Þ',           value: ':Þ' },
-        { label: '(ㅇㅡㅇ)',       value: '(ㅇㅡㅇ)' },
-        { label: '(˃ ⤙ ˂ )',     value: '(˃ ⤙ ˂ )' },
-        { label: '(╹ -╹)?',      value: '(╹ -╹)?' },
-        { label: '(ദ്ദി˙ᗜ˙)',     value: '(ദ്ദി˙ᗜ˙)' },
-        { label: '*n-word*',      value: 'what a notable person!' },
-    ];
+    let onlineChannel   = null;
+    let onlineUsers     = new Set();   // track who is online
+    let profileCache    = {};          // cache profiles to avoid re-fetching
+    let unreadMap       = {};          // convId -> unread count
+    let lastSeenMap     = {};          // convId -> timestamp of last seen message
 
     function timeAgo(dateStr) {
         const diff = Date.now() - new Date(dateStr).getTime();
@@ -109,7 +165,7 @@
     async function loadConversations() {
         const { data: convs } = await sb
             .from('conversations')
-            .select('*, messages(content, created_at, sender_id)')
+            .select('*, messages(content, created_at, sender_id, seen)')
             .or(`user_a.eq.${currentUserId},user_b.eq.${currentUserId}`)
             .order('updated_at', { ascending: false });
 
@@ -121,7 +177,6 @@
             return;
         }
 
-        // Get partner usernames
         const partnerIds = convs.map(c => c.user_a === currentUserId ? c.user_b : c.user_a);
         const { data: profiles } = await sb
             .from('profiles')
@@ -129,79 +184,79 @@
             .in('id', partnerIds);
 
         const profileMap = {};
-        (profiles || []).forEach(p => profileMap[p.id] = p);
+        (profiles || []).forEach(p => { profileMap[p.id] = p; profileCache[p.id] = p; });
 
         convs.forEach(conv => {
-            const partnerId = conv.user_a === currentUserId ? conv.user_b : conv.user_a;
-            const partner   = profileMap[partnerId] || { username: 'unknown' };
-            const msgs      = conv.messages || [];
-            const lastMsg   = msgs.sort((a,b) => new Date(b.created_at) - new Date(a.created_at))[0];
+            const partnerId   = conv.user_a === currentUserId ? conv.user_b : conv.user_a;
+            const partner     = profileMap[partnerId] || { username: 'unknown' };
+            const msgs        = conv.messages || [];
+            const sorted      = msgs.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+            const lastMsg     = sorted[0];
+
+            // Count unread: messages from partner that aren't seen
+            const unread = msgs.filter(m => m.sender_id !== currentUserId && !m.seen).length;
+            unreadMap[conv.id] = unread;
+
+            const avatarHTML = partner.avatar_url
+                ? `<img src="${partner.avatar_url}" alt="">`
+                : (partner.username || '?')[0].toUpperCase();
 
             const item = document.createElement('div');
             item.className = 'conv-item' + (conv.id === activeConvId ? ' active' : '');
-            item.dataset.convId     = conv.id;
-            item.dataset.partnerId  = partnerId;
+            item.dataset.convId      = conv.id;
+            item.dataset.partnerId   = partnerId;
             item.dataset.partnerName = partner.username;
+            item.setAttribute('data-partner-id', partnerId);
             item.innerHTML = `
-                <div class="conv-username">${partner.username}</div>
-                <div class="conv-preview">${lastMsg ? lastMsg.content : 'no messages yet'}</div>`;
-            item.addEventListener('click', () => openConversation(conv.id, partner.username, partnerId));
+                <div class="conv-avatar">
+                    ${avatarHTML}
+                </div>
+                <div class="conv-item-text">
+                    <div class="conv-username">${partner.username}</div>
+                    <div class="conv-preview">${lastMsg ? lastMsg.content.slice(0, 30) : 'no messages yet'}</div>
+                </div>
+                ${unread > 0 ? `<span class="unread-badge">${unread}</span>` : ''}`;
+            item.addEventListener('click', () => openConversation(conv.id, partner, partnerId));
             list.appendChild(item);
         });
     }
 
-    async function openConversation(convId, partnerName, partnerId) {
+    async function openConversation(convId, partnerOrName, partnerId) {
         activeConvId = convId;
+        const partner = typeof partnerOrName === 'object' ? partnerOrName : { username: partnerOrName };
+        const partnerName = partner.username;
+
+        // Mark messages as seen
+        await sb.from('messages')
+            .update({ seen: true })
+            .eq('conversation_id', convId)
+            .neq('sender_id', currentUserId);
+        unreadMap[convId] = 0;
 
         // Update active state
         document.querySelectorAll('.conv-item').forEach(i => i.classList.remove('active'));
         const activeItem = document.querySelector(`[data-conv-id="${convId}"]`);
-        if (activeItem) activeItem.classList.add('active');
+        if (activeItem) {
+            activeItem.classList.add('active');
+            // Remove unread badge
+            activeItem.querySelector('.unread-badge')?.remove();
+        }
 
         document.getElementById('chat-empty').style.display      = 'none';
         document.getElementById('chat-header').style.display     = 'block';
         document.getElementById('chat-messages').style.display   = 'flex';
         document.getElementById('chat-input-row').style.display  = 'flex';
-        document.getElementById('chat-header').textContent       = '// ' + partnerName;
 
-        // Build reaction bar
-        const reactionBar = document.getElementById('reaction-bar');
-        reactionBar.style.display = 'flex';
-        reactionBar.innerHTML = '';
-        REACTION_PRESETS.forEach(preset => {
-            const btn = document.createElement('button');
-            btn.textContent = preset.label;
-            btn.style.cssText = 'font-size:0.78em; padding:3px 8px; letter-spacing:0; font-family:inherit;';
-            function applyBtnTheme(b) {
-                const mono = localStorage.getItem('theme') === 'monochrome';
-                b.style.background  = mono ? '#000' : '#fff';
-                b.style.color       = mono ? '#555' : '#888';
-                b.style.borderColor = mono ? '#333' : '#ddd';
-            }
-            applyBtnTheme(btn);
-            btn.addEventListener('mouseenter', () => { btn.style.background='#fff'; btn.style.color='#000'; btn.style.borderColor='#fff'; });
-            btn.addEventListener('mouseleave', () => applyBtnTheme(btn));
-            btn.addEventListener('click', () => {
-                const input = document.getElementById('msg-input');
-                input.value = preset.value;
-                input.focus();
-            });
-            reactionBar.appendChild(btn);
-        });
-
-        // Re-theme reaction bar on monochrome toggle
-        document.getElementById('theme-toggle')?.addEventListener('click', () => {
-            setTimeout(() => {
-                const mono = localStorage.getItem('theme') === 'monochrome';
-                reactionBar.style.background  = mono ? '#000'    : '#faf8f5';
-                reactionBar.style.borderColor = mono ? '#222'    : '#eee';
-                reactionBar.querySelectorAll('button').forEach(b => {
-                    b.style.background  = mono ? '#000' : '#fff';
-                    b.style.color       = mono ? '#555' : '#888';
-                    b.style.borderColor = mono ? '#333' : '#ddd';
-                });
-            }, 100);
-        });
+        // Build chat header with avatar
+        const cachedProfile = profileCache[partnerId] || partner;
+        const avatarHTML = cachedProfile.avatar_url
+            ? `<img src="${cachedProfile.avatar_url}" alt="">`
+            : partnerName[0].toUpperCase();
+        document.getElementById('chat-header').innerHTML = `
+            <div class="chat-header-inner">
+                <div class="chat-header-avatar">${avatarHTML}</div>
+                <div>// ${partnerName}</div>
+            </div>`;
 
         await loadMessages(convId);
 
@@ -218,6 +273,7 @@
             .order('created_at', { ascending: true });
 
         const container = document.getElementById('chat-messages');
+        const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 60;
         container.innerHTML = '';
 
         if (!msgs || msgs.length === 0) {
@@ -226,13 +282,22 @@
         }
 
         msgs.forEach(msg => {
+            const isMine = msg.sender_id === currentUserId;
             const div = document.createElement('div');
-            div.className = 'msg-bubble ' + (msg.sender_id === currentUserId ? 'mine' : 'theirs');
-            div.innerHTML = `${msg.content}<span class="msg-time">${timeAgo(msg.created_at)}</span>`;
+            div.className = 'msg-bubble ' + (isMine ? 'mine' : 'theirs');
+            const seenTick = isMine ? (msg.seen ? ' ✓✓' : ' ✓') : '';
+            div.innerHTML = `${msg.content}<span class="msg-time">${timeAgo(msg.created_at)}${seenTick}</span>`;
             container.appendChild(div);
         });
 
-        container.scrollTop = container.scrollHeight;
+        // Mark incoming messages as seen
+        await sb.from('messages')
+            .update({ seen: true })
+            .eq('conversation_id', convId)
+            .neq('sender_id', currentUserId)
+            .eq('seen', false);
+
+        if (wasAtBottom) container.scrollTop = container.scrollHeight;
     }
 
     async function sendMessage() {
@@ -270,6 +335,30 @@
         const { data: me } = await sb.from('profiles').select('username').eq('id', currentUserId).single();
         currentUsername = me?.username;
 
+        // ---- Online presence via Supabase Realtime ----
+        onlineChannel = sb.channel('online-users', {
+            config: { presence: { key: currentUserId } }
+        });
+
+        let presenceDebounce = null;
+        onlineChannel
+            .on('presence', { event: 'sync' }, () => {
+                const state = onlineChannel.presenceState();
+                onlineUsers.clear();
+                Object.keys(state).forEach(key => onlineUsers.add(key));
+
+                // Debounce: only update UI once after presence settles
+                if (presenceDebounce) clearTimeout(presenceDebounce);
+                presenceDebounce = setTimeout(() => {
+                    // presence sync — no UI update needed (status removed)
+                }, 300);
+            })
+            .subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    await onlineChannel.track({ user: currentUserId, online_at: new Date().toISOString() });
+                }
+            });
+
         loadConversations();
 
         // Start new conversation by username
@@ -295,7 +384,7 @@
 
             if (existing) {
                 msgEl.style.color = '#668866'; msgEl.textContent = 'Conversation already exists.';
-                openConversation(existing.id, target.username, target.id);
+                openConversation(existing.id, target, target.id);
                 loadConversations();
                 return;
             }
@@ -310,7 +399,7 @@
             msgEl.style.color = '#668866'; msgEl.textContent = 'Started!';
             document.getElementById('new-username').value = '';
             await loadConversations();
-            openConversation(newConv.id, target.username, target.id);
+            openConversation(newConv.id, target, target.id);
         });
 
         // Send on button click or Enter
