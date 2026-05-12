@@ -1718,3 +1718,151 @@ body.monochrome-mode .new-conv-row input { background: #000; border-color: #333;
 body.monochrome-mode #menu-username {
     color: #ffffff !important;
 }
+
+/* ============================================================
+   --- SPIDER GRAPH
+   ============================================================ */
+.spider-section {
+    margin-top: 40px;
+}
+
+.spider-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1px;
+    background: #ddd;
+    border: 1px solid #ddd;
+    margin-top: 14px;
+}
+
+.spider-card {
+    background: #faf8f5;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+}
+
+.spider-card canvas {
+    display: block;
+}
+
+.spider-card h4 {
+    font-size: 0.72em;
+    color: #bbb;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin: 0;
+    align-self: flex-start;
+}
+
+.spider-sliders {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.spider-slider-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75em;
+}
+
+.spider-slider-label {
+    width: 110px;
+    color: #888;
+    text-transform: lowercase;
+    letter-spacing: 1px;
+    flex-shrink: 0;
+}
+
+.spider-slider-row input[type=range] {
+    flex: 1;
+    accent-color: #1a1a18;
+    height: 3px;
+    cursor: pointer;
+}
+
+.spider-slider-val {
+    width: 20px;
+    text-align: right;
+    color: #1a1a18;
+    font-size: 0.9em;
+}
+
+.spider-save-btn {
+    align-self: flex-start;
+    font-size: 0.72em;
+    padding: 5px 14px;
+}
+
+/* Download profile card button */
+.download-profile-btn {
+    margin-top: 20px;
+    font-size: 0.78em;
+    background: transparent;
+    border-color: #ccc;
+    color: #888;
+    letter-spacing: 2px;
+}
+
+.download-profile-btn:hover {
+    background: #1a1a18;
+    color: #f0ede8;
+    border-color: #1a1a18;
+    box-shadow: 2px 2px 0 #aaa;
+}
+
+/* Monochrome spider */
+body.monochrome-mode .spider-card {
+    background: #0a0a0a;
+}
+
+body.monochrome-mode .spider-grid {
+    background: #222;
+    border-color: #222;
+}
+
+body.monochrome-mode .spider-card h4 {
+    color: #333;
+}
+
+body.monochrome-mode .spider-slider-label {
+    color: #555;
+}
+
+body.monochrome-mode .spider-slider-val {
+    color: #fff;
+}
+
+body.monochrome-mode .spider-slider-row input[type=range] {
+    accent-color: #fff;
+}
+
+body.monochrome-mode .download-profile-btn {
+    border-color: #333;
+    color: #444;
+}
+
+body.monochrome-mode .download-profile-btn:hover {
+    background: #fff;
+    color: #000;
+    border-color: #fff;
+}
+
+@media (max-width: 768px) {
+    .spider-grid { grid-template-columns: 1fr; }
+    .spider-slider-label { width: 90px; }
+}
+
+body.monochrome-mode #spider-section > div {
+    background: #111;
+    border-color: #222;
+}
+
+body.monochrome-mode #spider-section [style*="background:#faf8f5"] {
+    background: #0a0a0a !important;
+}
