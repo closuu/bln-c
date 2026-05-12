@@ -41,8 +41,8 @@
         <main>
             <div class="profile-header">
                 <div class="profile-avatar-wrap">
-                    <div class="profile-avatar" id="avatar-letter" style="display:flex;align-items:center;justify-content:center;">?</div>
-                    <img id="avatar-img" class="profile-pic" src="" alt="profile" style="display:none; width:56px; height:56px;">
+                    <div class="profile-avatar" id="avatar-letter" style="display:flex;align-items:center;justify-content:center;width:88px;height:88px;font-size:2em;">?</div>
+                    <img id="avatar-img" class="profile-pic" src="" alt="profile" style="display:none; width:88px; height:88px;">
                     <input type="file" id="pic-file" accept="image/*" style="display:none;">
                     <button class="profile-pic-upload-btn" onclick="document.getElementById('pic-file').click()">edit</button>
                 </div>
@@ -67,6 +67,39 @@
                 </div>
             </div>
 
+            <!-- Spider graphs -->
+            <div id="spider-section" style="margin-top:40px;">
+                <h3 style="margin-bottom:6px;">user_scaling</h3>
+                <p style="font-size:0.8em; color:#bbb; margin-bottom:14px;">your own custom spider chart. press modify to edit </p>
+                <div style="display:flex; gap:1px; background:#ddd; border:1px solid #ddd; flex-wrap:wrap;">
+                    <div style="flex:1; min-width:220px; background:#faf8f5; padding:18px; display:flex; flex-direction:column; align-items:center; gap:10px;">
+                        <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-size:0.62em; color:#bbb; letter-spacing:3px; text-transform:uppercase;">graph 1</span>
+                            <button id="modify1-btn" style="font-size:0.65em; padding:3px 10px; background:transparent; border:1px solid #ccc; color:#888; font-family:inherit; cursor:pointer; letter-spacing:1px;">Modify</button>
+                        </div>
+                        <canvas id="spider1" width="200" height="200"></canvas>
+                        <div id="sliders1" style="display:none; width:100%; flex-direction:column; gap:8px;"></div>
+                        <div id="save1-wrap" style="display:none; width:100%;">
+                            <button id="save1-btn" style="width:100%; font-size:0.78em; font-family:inherit; padding:8px; cursor:pointer; letter-spacing:2px;">Save</button>
+                            <p id="save1-msg" style="font-size:0.75em; min-height:14px; margin-top:4px;"></p>
+                        </div>
+                    </div>
+                    <div style="flex:1; min-width:220px; background:#faf8f5; padding:18px; display:flex; flex-direction:column; align-items:center; gap:10px;">
+                        <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-size:0.62em; color:#bbb; letter-spacing:3px; text-transform:uppercase;">graph 2</span>
+                            <button id="modify2-btn" style="font-size:0.65em; padding:3px 10px; background:transparent; border:1px solid #ccc; color:#888; font-family:inherit; cursor:pointer; letter-spacing:1px;">Modify</button>
+                        </div>
+                        <canvas id="spider2" width="200" height="200"></canvas>
+                        <div id="sliders2" style="display:none; width:100%; flex-direction:column; gap:8px;"></div>
+                        <div id="save2-wrap" style="display:none; width:100%;">
+                            <button id="save2-btn" style="width:100%; font-size:0.78em; font-family:inherit; padding:8px; cursor:pointer; letter-spacing:2px;">Save</button>
+                            <p id="save2-msg" style="font-size:0.75em; min-height:14px; margin-top:4px;"></p>
+                        </div>
+                    </div>
+                </div>
+                <button id="download-card-btn" style="margin-top:14px; font-size:0.78em; background:transparent; border:1px solid #ccc; color:#888; font-family:inherit; padding:8px 16px; cursor:pointer; letter-spacing:2px;">↓ Download profile card</button>
+            </div>
+
             <h3 style="margin-top: 40px; margin-bottom: 20px;">Catalogue</h3>
             <p style="color: #94a3b8;">Click a product to view or access it, download directories, or browse source files.
 </p>
@@ -78,7 +111,7 @@
     </div>
 
     <footer>
-        <p>&copy; 2026 - gonda Appdev Lab</p>
+        <p>&copy; 2026 - qobble Appdev Lab</p>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -200,6 +233,238 @@
             }
 
             
+            // ---- Spider graphs ----
+            const GRAPH1_LABELS = ['caffeine','attn.span','confidence','damage','excuses','luck'];
+            const GRAPH2_LABELS = ['memory','carrying','coherence','procrastin.','yapping','pretending','fraud'];
+            let spider1Vals = GRAPH1_LABELS.map(() => 5);
+            let spider2Vals = GRAPH2_LABELS.map(() => 5);
+
+            function isMono() { return document.body.classList.contains('monochrome-mode'); }
+
+            function buildSliders(containerId, labels, vals, onChange) {
+                const cont = document.getElementById(containerId);
+                cont.innerHTML = '';
+                labels.forEach((label, i) => {
+                    const row = document.createElement('div');
+                    row.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:0.75em;';
+                    const lbl = document.createElement('span');
+                    lbl.style.cssText = 'width:90px;color:' + (isMono() ? '#fff' : '#888') + ';flex-shrink:0;';
+                    lbl.textContent = label;
+                   const valSpan = document.createElement('span');
+        valSpan.style.cssText = 'width:18px;text-align:right;color:' + (isMono() ? '#fff' : '#1a1a18') + ';';
+                    valSpan.textContent = vals[i];
+                    const inp = document.createElement('input');
+                    inp.type = 'range'; inp.min = 0; inp.max = 10; inp.value = vals[i];
+                    inp.style.cssText = 'flex:1;accent-color:#1a1a18;cursor:pointer;';
+                    inp.addEventListener('input', () => {
+                        vals[i] = parseInt(inp.value);
+                        valSpan.textContent = vals[i];
+                        onChange();
+                    });
+                    row.appendChild(lbl); row.appendChild(inp); row.appendChild(valSpan);
+                    cont.appendChild(row);
+                });
+            }
+
+            function drawSpider(canvasId, labels, vals, mono) {
+                const c = document.getElementById(canvasId);
+                if (!c) return;
+                const ctx = c.getContext('2d');
+                const cx = c.width/2, cy = c.height/2, R = Math.min(cx,cy)-24, n = labels.length;
+                const bg = mono ? '#0a0a0a' : '#faf8f5';
+                const gc = mono ? '#2a2a2a' : '#e0ddd8';
+                const lc = mono ? '#fff'    : '#1a1a18';
+                const fc = mono ? 'rgba(255,255,255,0.1)' : 'rgba(26,26,24,0.08)';
+                const tc = mono ? '#ccc'    : '#888';
+                ctx.clearRect(0,0,c.width,c.height);
+                ctx.fillStyle = bg; ctx.fillRect(0,0,c.width,c.height);
+                for (let ring=1;ring<=5;ring++){
+                    ctx.beginPath();
+                    for(let i=0;i<n;i++){const a=(Math.PI*2*i/n)-Math.PI/2;const r=(ring/5)*R;i===0?ctx.moveTo(cx+r*Math.cos(a),cy+r*Math.sin(a)):ctx.lineTo(cx+r*Math.cos(a),cy+r*Math.sin(a));}
+                    ctx.closePath();ctx.strokeStyle=gc;ctx.lineWidth=0.7;ctx.stroke();
+                }
+                for(let i=0;i<n;i++){const a=(Math.PI*2*i/n)-Math.PI/2;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+R*Math.cos(a),cy+R*Math.sin(a));ctx.strokeStyle=gc;ctx.lineWidth=0.7;ctx.stroke();}
+                ctx.beginPath();
+                for(let i=0;i<n;i++){const a=(Math.PI*2*i/n)-Math.PI/2;const r=(vals[i]/10)*R;i===0?ctx.moveTo(cx+r*Math.cos(a),cy+r*Math.sin(a)):ctx.lineTo(cx+r*Math.cos(a),cy+r*Math.sin(a));}
+                ctx.closePath();ctx.fillStyle=fc;ctx.fill();ctx.strokeStyle=lc;ctx.lineWidth=1.5;ctx.stroke();
+                for(let i=0;i<n;i++){const a=(Math.PI*2*i/n)-Math.PI/2;const r=(vals[i]/10)*R;ctx.beginPath();ctx.arc(cx+r*Math.cos(a),cy+r*Math.sin(a),3,0,Math.PI*2);ctx.fillStyle=lc;ctx.fill();}
+                ctx.fillStyle=tc;ctx.font='8px monospace';ctx.textAlign='center';
+                for(let i=0;i<n;i++){const a=(Math.PI*2*i/n)-Math.PI/2;const r=R+14;ctx.fillText(labels[i],cx+r*Math.cos(a),cy+r*Math.sin(a)+3);}
+            }
+
+            function redrawSpiders() {
+                drawSpider('spider1', GRAPH1_LABELS, spider1Vals, isMono());
+                drawSpider('spider2', GRAPH2_LABELS, spider2Vals, isMono());
+            }
+
+            // Load saved spider data
+            const { data: spiderData } = await sb
+                .from('user_spiders').select('*').eq('user_id', session.user.id).single();
+            if (spiderData) {
+                if (spiderData.graph1) spider1Vals = spiderData.graph1;
+                if (spiderData.graph2) spider2Vals = spiderData.graph2;
+            }
+
+            buildSliders('sliders1', GRAPH1_LABELS, spider1Vals, redrawSpiders);
+            buildSliders('sliders2', GRAPH2_LABELS, spider2Vals, redrawSpiders);
+            redrawSpiders();
+
+ // Apply correct bg if monochrome is already on at load time
+if (isMono()) {
+    document.querySelectorAll('#spider-section > div > div').forEach(div => {
+        div.style.background = '#0a0a0a';
+    });
+}
+
+            // Modify toggles
+            document.getElementById('modify1-btn').addEventListener('click', () => {
+                const open = document.getElementById('sliders1').style.display !== 'none';
+                document.getElementById('sliders1').style.display   = open ? 'none' : 'flex';
+                document.getElementById('save1-wrap').style.display = open ? 'none' : 'block';
+                document.getElementById('modify1-btn').textContent  = open ? 'Modify' : 'Cancel';
+            });
+            document.getElementById('modify2-btn').addEventListener('click', () => {
+                const open = document.getElementById('sliders2').style.display !== 'none';
+                document.getElementById('sliders2').style.display   = open ? 'none' : 'flex';
+                document.getElementById('save2-wrap').style.display = open ? 'none' : 'block';
+                document.getElementById('modify2-btn').textContent  = open ? 'Modify' : 'Cancel';
+            });
+
+            document.getElementById('save1-btn').addEventListener('click', async () => {
+                const msg = document.getElementById('save1-msg');
+                const { error } = await sb.from('user_spiders').upsert({ user_id: session.user.id, graph1: spider1Vals }, { onConflict: 'user_id' });
+                if (error) { msg.style.color='#cc8888'; msg.textContent=error.message; return; }
+                msg.style.color='#668866'; msg.textContent='Saved!';
+                setTimeout(() => { document.getElementById('sliders1').style.display='none'; document.getElementById('save1-wrap').style.display='none'; document.getElementById('modify1-btn').textContent='Modify'; msg.textContent=''; }, 800);
+            });
+
+            document.getElementById('save2-btn').addEventListener('click', async () => {
+                const msg = document.getElementById('save2-msg');
+                const { data: ex } = await sb.from('user_spiders').select('graph1').eq('user_id', session.user.id).single();
+                const { error } = await sb.from('user_spiders').upsert({ user_id: session.user.id, graph1: ex?.graph1||spider1Vals, graph2: spider2Vals }, { onConflict: 'user_id' });
+                if (error) { msg.style.color='#cc8888'; msg.textContent=error.message; return; }
+                msg.style.color='#668866'; msg.textContent='Saved!';
+                setTimeout(() => { document.getElementById('sliders2').style.display='none'; document.getElementById('save2-wrap').style.display='none'; document.getElementById('modify2-btn').textContent='Modify'; msg.textContent=''; }, 800);
+            });
+
+            // Redraw on monochrome toggle
+            document.getElementById('theme-toggle').addEventListener('click', () => {
+    setTimeout(() => {
+        redrawSpiders();
+        const mono = isMono();
+        document.querySelectorAll('#spider-section > div > div').forEach(div => {
+            div.style.background = mono ? '#0a0a0a' : '#faf8f5';
+        });
+    }, 80);
+});
+
+            // ---- Download profile card ----
+            document.getElementById('download-card-btn').addEventListener('click', async () => {
+                document.getElementById('download-card-btn').textContent = '...generating';
+                const mono  = isMono();
+                const bg    = mono ? '#0a0a0a' : '#faf8f5';
+                const textC = mono ? '#fff'    : '#1a1a18';
+                const subC  = mono ? '#aaa'    : '#aaa';
+                const brdC  = mono ? '#333'    : '#ddd';
+                const accC  = mono ? '#fff'    : '#1a1a18';
+
+               
+                const cardW = 700, cardH = 580;
+                const oc = document.createElement('canvas');
+                oc.width = cardW; oc.height = cardH;
+                const c = oc.getContext('2d');
+
+                c.fillStyle = bg; c.fillRect(0,0,cardW,cardH);
+                c.strokeStyle = brdC; c.lineWidth = 1; c.strokeRect(0.5,0.5,cardW-1,cardH-1);
+                c.fillStyle = accC; c.fillRect(0,0,4,cardH);
+
+                const asz = 76, ax = 24, ay = 24;
+                c.fillStyle = accC; c.fillRect(ax, ay, asz, asz);
+
+                // Load avatar with crossOrigin to prevent canvas taint
+                const aEl = document.getElementById('avatar-img');
+                if (aEl && aEl.style.display !== 'none' && aEl.src && aEl.naturalWidth > 0) {
+                    try {
+                        await new Promise((resolve) => {
+                            const freshImg = new Image();
+                            freshImg.crossOrigin = 'anonymous';
+                            freshImg.onload  = () => { try { c.drawImage(freshImg, ax, ay, asz, asz); } catch(e){} resolve(); };
+                            freshImg.onerror = () => resolve(); // fallback silently
+                            freshImg.src = aEl.src.split('?')[0] + '?t=' + Date.now();
+                        });
+                    } catch(e) {
+                        // Draw letter fallback
+                        c.fillStyle = mono ? '#000' : '#f0ede8';
+                        c.font = 'bold 28px monospace'; c.textAlign='center'; c.textBaseline='middle';
+                        c.fillText((profile?.username||'?')[0].toUpperCase(), ax+asz/2, ay+asz/2);
+                    }
+                } else {
+                    c.fillStyle = mono ? '#000' : '#f0ede8';
+                    c.font = 'bold 28px monospace'; c.textAlign='center'; c.textBaseline='middle';
+                    c.fillText((profile?.username||'?')[0].toUpperCase(), ax+asz/2, ay+asz/2);
+                }
+
+                c.textAlign='left'; c.textBaseline='top';
+                c.fillStyle=textC; c.font='bold 20px monospace';
+                c.fillText(profile?.username||'—', ax+asz+16, ay+6);
+                c.fillStyle=subC; c.font='11px monospace';
+                c.fillText('plan: '+(profile?.plan||'—')+'   status: '+(profile?.status||'—'), ax+asz+16, ay+34);
+                c.fillText('gomoku:  W'+(profile?.gomoku_wins||0)+'  L'+(profile?.gomoku_losses||0), ax+asz+16, ay+52);
+               const joined = new Date(profile?.created_at).toLocaleDateString('en-US',{month:'long',year:'numeric'});
+               c.fillText('member since: '+joined, ax+asz+16, ay+68);
+               
+               
+c.strokeStyle=brdC; c.lineWidth=0.8;
+c.beginPath(); c.moveTo(24,114); c.lineTo(cardW-24,114); c.stroke();
+
+c.fillStyle=subC; c.font='9px monospace';
+c.fillText('GRAPH 1', 24, 126);
+c.fillText('GRAPH 2', cardW/2+10, 126);
+
+                function spiderTo(ctx2, labels, vals, w, h) {
+                    const cx=w/2, cy=h/2, R=Math.min(cx,cy)-22, n=labels.length;
+                    const gc=mono?'#2a2a2a':'#e0ddd8', lc=mono?'#fff':'#1a1a18';
+                    const fc=mono?'rgba(255,255,255,0.1)':'rgba(26,26,24,0.08)', tc=mono?'#ccc':'#888';
+                    ctx2.fillStyle=bg; ctx2.fillRect(0,0,w,h);
+                    for(let ring=1;ring<=5;ring++){
+                        ctx2.beginPath();
+                        for(let i=0;i<n;i++){const a=(Math.PI*2*i/n)-Math.PI/2;const r=(ring/5)*R;i===0?ctx2.moveTo(cx+r*Math.cos(a),cy+r*Math.sin(a)):ctx2.lineTo(cx+r*Math.cos(a),cy+r*Math.sin(a));}
+                        ctx2.closePath();ctx2.strokeStyle=gc;ctx2.lineWidth=0.6;ctx2.stroke();
+                    }
+                    for(let i=0;i<n;i++){const a=(Math.PI*2*i/n)-Math.PI/2;ctx2.beginPath();ctx2.moveTo(cx,cy);ctx2.lineTo(cx+R*Math.cos(a),cy+R*Math.sin(a));ctx2.strokeStyle=gc;ctx2.lineWidth=0.6;ctx2.stroke();}
+                    ctx2.beginPath();
+                    for(let i=0;i<n;i++){const a=(Math.PI*2*i/n)-Math.PI/2;const r=(vals[i]/10)*R;i===0?ctx2.moveTo(cx+r*Math.cos(a),cy+r*Math.sin(a)):ctx2.lineTo(cx+r*Math.cos(a),cy+r*Math.sin(a));}
+                    ctx2.closePath();ctx2.fillStyle=fc;ctx2.fill();ctx2.strokeStyle=lc;ctx2.lineWidth=1.5;ctx2.stroke();
+                    for(let i=0;i<n;i++){const a=(Math.PI*2*i/n)-Math.PI/2;const r=(vals[i]/10)*R;ctx2.beginPath();ctx2.arc(cx+r*Math.cos(a),cy+r*Math.sin(a),3,0,Math.PI*2);ctx2.fillStyle=lc;ctx2.fill();}
+                    ctx2.fillStyle=tc;ctx2.font='8px monospace';ctx2.textAlign='center';
+                    for(let i=0;i<n;i++){const a=(Math.PI*2*i/n)-Math.PI/2;const r=R+14;ctx2.fillText(labels[i],cx+r*Math.cos(a),cy+r*Math.sin(a)+3);}
+                }
+
+                const spW=290, spH=270;
+                const t1=document.createElement('canvas'); t1.width=spW; t1.height=spH;
+                spiderTo(t1.getContext('2d'), GRAPH1_LABELS, spider1Vals, spW, spH);
+                c.drawImage(t1, 24, 144, spW, spH);
+
+                const t2=document.createElement('canvas'); t2.width=spW; t2.height=spH;
+                spiderTo(t2.getContext('2d'), GRAPH2_LABELS, spider2Vals, spW, spH);
+                c.drawImage(t2, cardW/2+10, 144, spW, spH);
+
+                c.fillStyle=subC; c.font='9px monospace'; c.textAlign='center';
+                c.fillText('bln-c / by qobble - appdev lab · 2026', cardW/2, cardH-14);
+
+                try {
+                    const link = document.createElement('a');
+                    link.download = (profile?.username||'profile')+'-card.png';
+                    link.href = oc.toDataURL('image/png');
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                } catch(err) {
+                    alert('Download failed: ' + err.message);
+                }
+                document.getElementById('download-card-btn').textContent = '↓ Download profile card';
+            });
+
             // ---- Catalogue submission form ----
             const main = document.querySelector('main');
             const submitDiv = document.createElement('div');
