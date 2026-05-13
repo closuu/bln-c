@@ -1189,48 +1189,12 @@
         listenForChallenges();
         loadLobbies();
 
-        // Restore hosted lobby if page was refreshed mid-lobby
-        const { data: myPendingGame } = await sb
-            .from('gomoku_games')
-            .select('id')
+        // Clean up any stale lobbies from this user on page load
+        await sb.from('gomoku_games')
+            .delete()
             .eq('black_player', myId)
             .eq('status', 'waiting')
-            .eq('is_public', true)
-            .single();
-
-        if (myPendingGame) {
-            myHostedGameId = myPendingGame.id;
-            gameId  = myPendingGame.id;
-            myColor = 'black';
-            document.getElementById('cancel-host-btn').style.display = 'inline-block';
-            document.getElementById('host-public-btn').style.display = 'none';
-            document.getElementById('host-msg').style.color = '#668866';
-            document.getElementById('host-msg').textContent = 'Lobby still open — waiting for someone to join...';
-            setPlayerUI('black', myProfile, document.getElementById('show-stats-toggle').checked);
-            document.getElementById('game-layout').style.display = 'flex';
-            document.getElementById('challenge-section').style.display = 'none';
-            document.getElementById('board-status').textContent = 'lobby open — waiting for anyone to join...';
-            canvas.classList.add('disabled');
-            drawBoard();
-
-            const acceptListener = sb.channel(`game_accept:${myPendingGame.id}`)
-                .on('broadcast', { event: 'accepted' }, async ({ payload }) => {
-                    if (payload.whiteId === myId) return;
-                    const { data: oppProfile } = await sb.from('profiles').select('*').eq('id', payload.whiteId).single();
-                    setPlayerUI('white', oppProfile || { username: payload.whiteUsername }, true);
-                    canvas.classList.remove('disabled');
-                    myHostedGameId = null;
-                    document.getElementById('cancel-host-btn').style.display = 'none';
-                    document.getElementById('host-public-btn').style.display = 'inline-block';
-                    document.getElementById('host-msg').textContent = '';
-                    updateTurnUI();
-                    acceptListener.unsubscribe();
-                    loadLobbies();
-                })
-                .subscribe();
-
-            joinGameChannel(myPendingGame.id);
-        }
+            .eq('is_public', true);
     })();
     </script>
     <script>
