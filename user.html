@@ -77,7 +77,7 @@
                             <span style="font-size:0.62em; color:#bbb; letter-spacing:3px; text-transform:uppercase;">graph 1</span>
                             <button id="modify1-btn" style="font-size:0.65em; padding:3px 10px; background:transparent; border:1px solid #ccc; color:#888; font-family:inherit; cursor:pointer; letter-spacing:1px;">Modify</button>
                         </div>
-                        <canvas id="spider1" width="200" height="200"></canvas>
+                       <canvas id="spider1" width="600" height="600" style="width:200px;height:200px;"></canvas>
                         <div id="sliders1" style="display:none; width:100%; flex-direction:column; gap:8px;"></div>
                         <div id="save1-wrap" style="display:none; width:100%;">
                             <button id="save1-btn" style="width:100%; font-size:0.78em; font-family:inherit; padding:8px; cursor:pointer; letter-spacing:2px;">Save</button>
@@ -89,7 +89,7 @@
                             <span style="font-size:0.62em; color:#bbb; letter-spacing:3px; text-transform:uppercase;">graph 2</span>
                             <button id="modify2-btn" style="font-size:0.65em; padding:3px 10px; background:transparent; border:1px solid #ccc; color:#888; font-family:inherit; cursor:pointer; letter-spacing:1px;">Modify</button>
                         </div>
-                        <canvas id="spider2" width="200" height="200"></canvas>
+                      <canvas id="spider2" width="600" height="600" style="width:200px;height:200px;"></canvas>
                         <div id="sliders2" style="display:none; width:100%; flex-direction:column; gap:8px;"></div>
                         <div id="save2-wrap" style="display:none; width:100%;">
                             <button id="save2-btn" style="width:100%; font-size:0.78em; font-family:inherit; padding:8px; cursor:pointer; letter-spacing:2px;">Save</button>
@@ -369,10 +369,13 @@ if (isMono()) {
                 const accC  = mono ? '#fff'    : '#1a1a18';
 
                
-                const cardW = 700, cardH = 580;
-                const oc = document.createElement('canvas');
-                oc.width = cardW; oc.height = cardH;
-                const c = oc.getContext('2d');
+               const cardW = 700, cardH = 580;
+               const scale = 3; 
+               const oc = document.createElement('canvas');
+               oc.width  = cardW * scale;
+               oc.height = cardH * scale;
+               const c = oc.getContext('2d');
+               c.scale(scale, scale);
 
                 c.fillStyle = bg; c.fillRect(0,0,cardW,cardH);
                 c.strokeStyle = brdC; c.lineWidth = 1; c.strokeRect(0.5,0.5,cardW-1,cardH-1);
