@@ -267,6 +267,25 @@
             border-left-color: #fff !important;
         }
 
+        /* Lobby list items */
+        .lobby-item {
+            padding: 9px 12px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.78em;
+            color: #666;
+        }
+        .lobby-item:last-child { border-bottom: none; }
+        .lobby-host { color: #1a1a18; font-size: 0.88em; }
+        .lobby-mine { color: #668866; font-size: 0.7em; letter-spacing: 1px; }
+
+        body.monochrome-mode #lobbies-list { border-color: #222; background: #0a0a0a; }
+        body.monochrome-mode .lobby-item { border-color: #1a1a1a; color: #555; }
+        body.monochrome-mode .lobby-host { color: #fff; }
+        body.monochrome-mode #public-section { background: #0a0a0a; border-color: #222; }
+
         @media (max-width: 768px) {
             .gomoku-layout { flex-direction: column; }
             .gomoku-sidebar { width: 100%; min-width: unset; flex-direction: row; flex-wrap: wrap; }
@@ -321,6 +340,20 @@
                         <div id="menu-record" style="font-size:0.72em; color:#bbb; letter-spacing:1px;">W0 L0</div>
                     </div>
                     <div style="font-size:0.65em; color:#ccc; letter-spacing:2px; text-transform:uppercase;">my stats</div>
+                </div>
+
+                <!-- Public matchmaking -->
+                <div class="challenge-form" id="public-section">
+                    <p class="gomoku-panel-title" style="margin-bottom:10px;">Public lobbies</p>
+                    <div style="display:flex; gap:6px; margin-bottom:10px;">
+                        <button id="host-public-btn" style="flex:1; font-size:0.78em;">Host a game</button>
+                        <button id="cancel-host-btn" style="display:none; flex:1; font-size:0.78em; background:transparent; border-color:#ccc; color:#888;">Cancel lobby</button>
+                        <button id="refresh-lobbies-btn" style="font-size:0.78em; padding:8px 10px; background:transparent; border-color:#ccc; color:#888;">↺</button>
+                    </div>
+                    <p id="host-msg" style="font-size:0.78em; min-height:16px; margin-bottom:8px;"></p>
+                    <div id="lobbies-list" style="border:1px solid #eee; min-height:40px;">
+                        <p style="padding:10px 12px; font-size:0.75em; color:#ccc;">Loading lobbies...</p>
+                    </div>
                 </div>
 
                 <!-- Challenge form -->
@@ -624,7 +657,7 @@
             .on('broadcast', { event: 'rematch' }, () => {
                 endGame();
             })
-            .on('broadcast', { event: 'resign' }, ({ payload }) => {
+            .on('broadcast', { event: 'resign' }, async ({ payload }) => {
                 // Opponent resigned — I win
                 if (!gameOver) {
                     gameOver = true;
@@ -633,9 +666,9 @@
                     document.getElementById('win-overlay').classList.add('show');
                     document.getElementById('board-status').textContent = 'game over';
                     document.getElementById('resign-wrap').style.display = 'none';
-                    // Update my wins
+                    // Count win for remaining player
                     const newWins = (myProfile.gomoku_wins || 0) + 1;
-                    sb.from('profiles').update({ gomoku_wins: newWins }).eq('id', myId);
+                    await sb.from('profiles').update({ gomoku_wins: newWins }).eq('id', myId);
                     myProfile.gomoku_wins = newWins;
                     const l = myProfile.gomoku_losses || 0;
                     document.getElementById('menu-record').textContent = `W${newWins}  L${l}  —  ${newWins + l} games played`;
@@ -945,6 +978,178 @@
         setTimeout(() => drawBoard(), 80);
     });
 
+    // ---- Public matchmaking ----
+    let myHostedGameId = null;
+
+    async function loadLobbies() {
+        const { data: lobbies } = await sb
+            .from('gomoku_games')
+            .select('id, black_player, created_at')
+            .eq('status', 'waiting')
+            .eq('is_public', true)
+            .order('created_at', { ascending: false });
+
+        const list = document.getElementById('lobbies-list');
+
+        if (!lobbies || lobbies.length === 0) {
+            list.innerHTML = '<p style="padding:10px 12px; font-size:0.75em; color:#ccc;">No open lobbies right now.</p>';
+            return;
+        }
+
+        const hostIds = [...new Set(lobbies.map(g => g.black_player).filter(Boolean))];
+        const { data: profiles } = await sb.from('profiles').select('id, username').in('id', hostIds);
+        const profileMap = {};
+        (profiles || []).forEach(p => profileMap[p.id] = p);
+
+        list.innerHTML = '';
+        lobbies.forEach(lobby => {
+            const host = profileMap[lobby.black_player];
+            const isMe = lobby.black_player === myId;
+            const item = document.createElement('div');
+            item.className = 'lobby-item';
+            item.innerHTML = `
+                <div>
+                    <span class="lobby-host">${host?.username || '—'}</span>
+                    ${isMe ? '<span class="lobby-mine"> (your lobby)</span>' : ''}
+                </div>
+                ${isMe
+                    ? ''
+                    : `<button class="action-btn edit" style="font-size:0.65em; padding:3px 8px;"
+                        onclick="joinLobby('${lobby.id}', '${lobby.black_player}', '${host?.username || ''}', this)">
+                        Join
+                       </button>`
+                }`;
+            list.appendChild(item);
+        });
+    }
+
+    window.joinLobby = async (gId, hostId, hostUsername, btn) => {
+        btn.disabled = true;
+        btn.textContent = '...';
+
+        // Cancel own hosted game if any
+        if (myHostedGameId) {
+            await sb.from('gomoku_games').delete().eq('id', myHostedGameId).eq('black_player', myId);
+            myHostedGameId = null;
+            document.getElementById('cancel-host-btn').style.display = 'none';
+            document.getElementById('host-msg').textContent = '';
+        }
+
+        gameId      = gId;
+        myColor     = 'white';
+        board       = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(null));
+        currentTurn = 'black';
+        gameOver    = false;
+
+        const { data: hostProfile } = await sb.from('profiles').select('*').eq('id', hostId).single();
+        setPlayerUI('black', hostProfile || { username: hostUsername }, true);
+        setPlayerUI('white', myProfile, document.getElementById('show-stats-toggle').checked);
+
+        await sb.from('gomoku_games').update({
+            white_player: myId,
+            status: 'playing',
+            is_public: false,
+            updated_at: new Date().toISOString()
+        }).eq('id', gId);
+
+        // Notify host
+        const notifyChannel = sb.channel(`game_accept:${gId}`);
+        await notifyChannel.subscribe(async (status) => {
+            if (status === 'SUBSCRIBED') {
+                await notifyChannel.send({
+                    type: 'broadcast', event: 'accepted',
+                    payload: { whiteId: myId, whiteUsername: myUsername, whiteProfile: myProfile }
+                });
+                notifyChannel.unsubscribe();
+            }
+        });
+
+        document.getElementById('game-layout').style.display = 'flex';
+        document.getElementById('challenge-section').style.display = 'none';
+        document.getElementById('public-section').style.display = 'none';
+        drawBoard();
+        updateTurnUI();
+        joinGameChannel(gId);
+        loadLobbies();
+    };
+
+    document.getElementById('host-public-btn').addEventListener('click', async () => {
+        const msgEl = document.getElementById('host-msg');
+
+        // Cancel previous hosted game if exists
+        if (myHostedGameId) {
+            await sb.from('gomoku_games').delete().eq('id', myHostedGameId).eq('black_player', myId);
+            myHostedGameId = null;
+        }
+
+        const { data: game, error } = await sb.from('gomoku_games').insert({
+            black_player: myId,
+            white_player: null,
+            board: JSON.stringify(Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(null))),
+            current_turn: 'black',
+            status: 'waiting',
+            is_public: true
+        }).select().single();
+
+        if (error) { msgEl.style.color='#cc8888'; msgEl.textContent=error.message; return; }
+
+        myHostedGameId = game.id;
+        gameId  = game.id;
+        myColor = 'black';
+
+        document.getElementById('cancel-host-btn').style.display = 'inline-block';
+        document.getElementById('host-public-btn').style.display = 'none';
+        msgEl.style.color = '#668866';
+        msgEl.textContent = 'Lobby created! Waiting for someone to join...';
+
+        setPlayerUI('black', myProfile, document.getElementById('show-stats-toggle').checked);
+        document.getElementById('name-white').textContent = '—';
+        document.getElementById('record-white').textContent = '';
+        document.getElementById('avatar-white').textContent = '?';
+
+        document.getElementById('game-layout').style.display = 'flex';
+        document.getElementById('challenge-section').style.display = 'none';
+        document.getElementById('board-status').textContent = 'lobby open — waiting for anyone to join...';
+        canvas.classList.add('disabled');
+        drawBoard();
+
+        // Listen for someone joining
+        const acceptListener = sb.channel(`game_accept:${game.id}`)
+            .on('broadcast', { event: 'accepted' }, async ({ payload }) => {
+                if (payload.whiteId === myId) return;
+                const { data: oppProfile } = await sb.from('profiles').select('*').eq('id', payload.whiteId).single();
+                setPlayerUI('white', oppProfile || { username: payload.whiteUsername }, true);
+                canvas.classList.remove('disabled');
+                myHostedGameId = null;
+                document.getElementById('cancel-host-btn').style.display = 'none';
+                document.getElementById('host-public-btn').style.display = 'inline-block';
+                msgEl.textContent = '';
+                updateTurnUI();
+                acceptListener.unsubscribe();
+                loadLobbies();
+            })
+            .subscribe();
+
+        joinGameChannel(game.id);
+        loadLobbies();
+    });
+
+    document.getElementById('cancel-host-btn').addEventListener('click', async () => {
+        if (!myHostedGameId) return;
+        await sb.from('gomoku_games').delete().eq('id', myHostedGameId).eq('black_player', myId);
+        myHostedGameId = null;
+        gameId  = null;
+        myColor = null;
+        document.getElementById('cancel-host-btn').style.display = 'none';
+        document.getElementById('host-public-btn').style.display = 'inline-block';
+        document.getElementById('host-msg').textContent = '';
+        document.getElementById('game-layout').style.display = 'none';
+        if (channel) { channel.unsubscribe(); channel = null; }
+        loadLobbies();
+    });
+
+    document.getElementById('refresh-lobbies-btn').addEventListener('click', loadLobbies);
+
     // ---- Init ----
     (async () => {
         const { data: { session } } = await sb.auth.getSession();
@@ -982,6 +1187,50 @@
 
         drawBoard();
         listenForChallenges();
+        loadLobbies();
+
+        // Restore hosted lobby if page was refreshed mid-lobby
+        const { data: myPendingGame } = await sb
+            .from('gomoku_games')
+            .select('id')
+            .eq('black_player', myId)
+            .eq('status', 'waiting')
+            .eq('is_public', true)
+            .single();
+
+        if (myPendingGame) {
+            myHostedGameId = myPendingGame.id;
+            gameId  = myPendingGame.id;
+            myColor = 'black';
+            document.getElementById('cancel-host-btn').style.display = 'inline-block';
+            document.getElementById('host-public-btn').style.display = 'none';
+            document.getElementById('host-msg').style.color = '#668866';
+            document.getElementById('host-msg').textContent = 'Lobby still open — waiting for someone to join...';
+            setPlayerUI('black', myProfile, document.getElementById('show-stats-toggle').checked);
+            document.getElementById('game-layout').style.display = 'flex';
+            document.getElementById('challenge-section').style.display = 'none';
+            document.getElementById('board-status').textContent = 'lobby open — waiting for anyone to join...';
+            canvas.classList.add('disabled');
+            drawBoard();
+
+            const acceptListener = sb.channel(`game_accept:${myPendingGame.id}`)
+                .on('broadcast', { event: 'accepted' }, async ({ payload }) => {
+                    if (payload.whiteId === myId) return;
+                    const { data: oppProfile } = await sb.from('profiles').select('*').eq('id', payload.whiteId).single();
+                    setPlayerUI('white', oppProfile || { username: payload.whiteUsername }, true);
+                    canvas.classList.remove('disabled');
+                    myHostedGameId = null;
+                    document.getElementById('cancel-host-btn').style.display = 'none';
+                    document.getElementById('host-public-btn').style.display = 'inline-block';
+                    document.getElementById('host-msg').textContent = '';
+                    updateTurnUI();
+                    acceptListener.unsubscribe();
+                    loadLobbies();
+                })
+                .subscribe();
+
+            joinGameChannel(myPendingGame.id);
+        }
     })();
     </script>
     <script>
