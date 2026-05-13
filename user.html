@@ -171,9 +171,12 @@
                     const ext      = file.name.split('.').pop();
                     const filePath = session.user.id + '/avatar.' + ext;
 
-                    const { error: uploadError } = await sb.storage
-                        .from('avatars')
-                        .upload(filePath, file, { upsert: true });
+                
+await sb.storage.from('avatars').remove([filePath]);
+
+const { error: uploadError } = await sb.storage
+    .from('avatars')
+    .upload(filePath, file);
 
                     if (uploadError) { alert('Upload failed: ' + uploadError.message); return; }
 
