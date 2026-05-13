@@ -10,20 +10,134 @@
     <style>
         .hero-section {
             margin-top: 20px;
-            text-align: center;
+            text-align: left;
         }
-        
+
         .hero-image {
             max-width: 100%;
             height: auto;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            display: block;
+            margin-bottom: 0;
+            border: 1px solid #ccc;
+            image-rendering: pixelated;
         }
-        
+
         .description {
-            margin-top: 15px;
+            margin-top: 18px;
             line-height: 1.6;
         }
+
+        /* ── What is bln-c panel ── */
+        .blnc-panel {
+            margin-top: 28px;
+            border: 1px solid #ccc;
+            border-top: 2px solid #1a1a18;
+        }
+
+        .blnc-panel-header {
+            background: #1a1a18;
+            color: #f0ede8;
+            font-size: 0.72em;
+            letter-spacing: 2px;
+            text-transform: none;
+            padding: 6px 12px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .blnc-panel-header span:last-child {
+            opacity: 0.4;
+        }
+
+        .blnc-panel-body {
+            padding: 0;
+        }
+
+        .feat-row {
+            display: grid;
+            grid-template-columns: 160px 16px 1fr;
+            align-items: baseline;
+            padding: 7px 14px;
+            border-bottom: 1px solid #eee;
+            font-size: 0.8em;
+            gap: 0 8px;
+            transition: background 0.08s;
+        }
+
+        .feat-row:last-child {
+            border-bottom: none;
+        }
+
+        .feat-row:hover {
+            background: #f0ede8;
+        }
+
+        .feat-name {
+            color: #1a1a18;
+            letter-spacing: 1px;
+            white-space: nowrap;
+        }
+
+        .feat-name::before {
+            content: '> ';
+            color: #ccc;
+        }
+
+        .feat-sep {
+            color: #ccc;
+            text-align: center;
+            font-size: 0.85em;
+        }
+
+        .feat-desc {
+            color: #888;
+            line-height: 1.5;
+        }
+
+        .feat-tag {
+            display: inline-block;
+            font-size: 0.7em;
+            padding: 0px 4px;
+            border: 1px solid currentColor;
+            color: #aaa;
+            margin-left: 6px;
+            vertical-align: middle;
+            letter-spacing: 1px;
+            text-transform: none;
+            animation: blink-live 1s step-start infinite;
+        }
+
+        @keyframes blink-live {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0; }
+        }
+
+        .blnc-panel-footer {
+            background: #f5f3ef;
+            border-top: 1px solid #e0ddd8;
+            padding: 6px 14px;
+            font-size: 0.68em;
+            color: #bbb;
+            letter-spacing: 2px;
+            text-transform: none;
+        }
+
+        /* monochrome overrides */
+        body.monochrome-mode .blnc-panel { border-color: #333; border-top-color: #fff; }
+        body.monochrome-mode .blnc-panel-header { background: #fff; color: #000; }
+        body.monochrome-mode .blnc-panel-header span:last-child { opacity: 0.4; }
+        body.monochrome-mode .feat-row { border-color: #222; }
+        body.monochrome-mode .feat-row:hover { background: #111; }
+        body.monochrome-mode .feat-name { color: #fff; }
+        body.monochrome-mode .feat-name::before { color: #555; }
+        body.monochrome-mode .feat-sep { color: #666; }
+        body.monochrome-mode .feat-desc { color: #ccc; }
+        body.monochrome-mode .feat-tag { color: #aaa; border-color: #aaa; }
+        body.monochrome-mode .blnc-panel-footer { background: #000; border-color: #222; color: #666; }
+        body.monochrome-mode .hero-image { border-color: #333; }
+        body.monochrome-mode .description p { color: #ccc; }
+        body.monochrome-mode .description p strong { color: #fff; }
+        body.monochrome-mode .description h3 { color: #aaa; }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/typed.js@2.1.0/dist/typed.umd.js"></script>
 </head>
@@ -48,7 +162,6 @@
                     <li><a href="rate.html">Rate My Week</a></li>
                     <li><a href="wall.html">Sticky Wall</a></li>
                     <li><a href="messages.html">Messages</a></li>
-                    <li><a href="gomoku.html">Gomoku</a></li>
                     <br>
                     <li><a href="login.html">Login</a></li>
                     <li><a href="register.html">Registration</a></li>
@@ -63,12 +176,67 @@
 
             <section class="hero-section">
                 <img src="images/blob.PNG" alt="Website Banner" class="hero-image">
+
                 <div class="description">
                     <h3>Personalized Learning Tips?</h3>
-                    <p><strong>no.</strong> </p>
-
+                    <p><strong>no.</strong></p>
                     <p>but welcome to bln-c! :D</p>
-                    <p>Browse random media / play games, save what matters, and keep something in order. That’s it.</p>
+                    <p>Browse random media, save what matters, and keep something in order. That’s it.</p>
+                </div>
+
+                <div class="blnc-panel">
+                    <div class="blnc-panel-header">
+                        <span>// what you can do here</span>
+                        <span>bln-c v.6f</span>
+                    </div>
+                    <div class="blnc-panel-body">
+                        <div class="feat-row">
+                            <span class="feat-name">catalogue</span>
+                            <span class="feat-sep">--</span>
+                            <span class="feat-desc">browsing, uploading resources in catalogue</span>
+                        </div>
+                        <div class="feat-row">
+                            <span class="feat-name">messages</span>
+                            <span class="feat-sep">--</span>
+                            <span class="feat-desc">chat with other users</span>
+                        </div>
+                        <div class="feat-row">
+                            <span class="feat-name">rate my week</span>
+                            <span class="feat-sep">--</span>
+                            <span class="feat-desc">rate your week, react, and keep track on them!</span>
+                        </div>
+                        <div class="feat-row">
+                            <span class="feat-name">gomoku</span>
+                            <span class="feat-sep">--</span>
+                            <span class="feat-desc">play gomoku multiplayer (syncs in real time! and *stats are recorded)<span class="feat-tag">live</span></span>
+                        </div>
+                        <div class="feat-row">
+                            <span class="feat-name">sticky wall</span>
+                            <span class="feat-sep">--</span>
+                            <span class="feat-desc">draw something and post it [*note: your drawing inverts when using mono toggle]</span>
+                        </div>
+                        <div class="feat-row">
+                            <span class="feat-name">mini notepad</span>
+                            <span class="feat-sep">--</span>
+                            <span class="feat-desc">make a checklist of things to do</span>
+                        </div>
+                        <div class="feat-row">
+                            <span class="feat-name">profile card</span>
+                            <span class="feat-sep">--</span>
+                            <span class="feat-desc">view / make your own profile card spider graph, and download your card!</span>
+                        </div>
+                        <div class="feat-row">
+                            <span class="feat-name">mono toggle</span>
+                            <span class="feat-sep">--</span>
+                            <span class="feat-desc">switch to light / dark themes using mono toggle </span>
+                        </div>
+                        <div class="feat-row">
+                            <span class="feat-name">devlog</span>
+                            <span class="feat-sep">--</span>
+                            <span class="feat-desc">view devlogs for updates as well!</span>
+                        </div>
+                    </div>
+                    <div class="blnc-panel-footer">//qobble</div>
                 </div>
             </section>
         </main>
@@ -85,7 +253,7 @@
         // Typed.js — runs after DOM ready
         document.addEventListener('DOMContentLoaded', function () {
             new Typed('#typed-title', {
-                strings: ['an empti bln-c:', 'the buttons do button things.', 'okay can you stop reading the header now.'],
+                strings: ['introducing bln-c:', 'browse. save. organise.', 'welcome back.'],
                 typeSpeed: 55,
                 backSpeed: 30,
                 backDelay: 2200,
@@ -95,14 +263,9 @@
             });
             new Typed('#typed-desc', {
                 strings: [
-                   
-                    'bln-c means blank canvas.',
-                    'the dash are just there to look cooler.',
-                    'lighter than ave. persons attention span.',
-                    'look, it even has alignment.',
-                    'no, adding more gradients wont help.',
-                    'no confetti animation. sorry.',
-                    
+                    'A website where you can browse odd, random content and keep something sorted.',
+                    'log your notes, and more! ',
+                    'whatchu waiting for?'
                 ],
                 typeSpeed: 35,
                 backSpeed: 18,
