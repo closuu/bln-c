@@ -666,8 +666,6 @@
                     document.getElementById('win-overlay').classList.add('show');
                     document.getElementById('board-status').textContent = 'game over';
                     document.getElementById('resign-wrap').style.display = 'none';
-                    // Remove from public lobby
-                    await sb.from('gomoku_games').update({ is_public: false }).eq('id', gameId);
                     // Count win for remaining player
                     const newWins = (myProfile.gomoku_wins || 0) + 1;
                     await sb.from('profiles').update({ gomoku_wins: newWins }).eq('id', myId);
@@ -756,9 +754,6 @@
             winnerColor === myColor ? 'you win!' : winnerName + ' wins!';
         document.getElementById('win-overlay').classList.add('show');
         document.getElementById('board-status').textContent = 'game over';
-
-        // Remove from public lobby when game ends
-        await sb.from('gomoku_games').update({ is_public: false }).eq('id', gameId);
 
         // Each player updates only their own record to avoid RLS issues
         if (isMe) {
@@ -1182,6 +1177,13 @@ sb.channel('public-lobbies')
         myId = session.user.id;
         document.getElementById('game-ui').style.display = 'block';
 
+        // Immediately delete any stale waiting games this user hosted
+        // (handles refresh, tab close, navigate away)
+        await sb.from('gomoku_games')
+            .delete()
+            .eq('black_player', myId)
+            .eq('status', 'waiting');
+
         const { data: profile } = await sb.from('profiles').select('*').eq('id', myId).single();
         myProfile  = profile;
         myUsername = profile?.username;
@@ -1209,28 +1211,7 @@ sb.channel('public-lobbies')
         listenForChallenges();
         loadLobbies();
 
-        // Clean up any stale lobbies from this user on page load
-        await sb.from('gomoku_games')
-            .delete()
-            .eq('black_player', myId)
-            .eq('status', 'waiting')
-            .eq('is_public', true);
-
-        // Delete hosted lobby when user closes/refreshes tab
-        window.addEventListener('beforeunload', () => {
-            if (!myHostedGameId) return;
-            const url = `${SUPABASE_URL}/rest/v1/gomoku_games?id=eq.${myHostedGameId}&black_player=eq.${myId}&status=eq.waiting`;
-            navigator.sendBeacon(url, new Blob([], { type: 'application/json' }));
-            fetch(url, {
-                method: 'DELETE',
-                headers: {
-                    'apikey': SUPABASE_ANON_KEY,
-                    'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-                    'Content-Type': 'application/json'
-                },
-                keepalive: true
-            }).catch(() => {});
-        });
+        // Stale lobby cleanup handled above on myId assignment
     })();
     </script>
     <script>
