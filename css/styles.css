@@ -970,6 +970,23 @@ body.monochrome-mode .devlog-entry {
 body.monochrome-mode .devlog-entry h3 { color: #fff; }
 body.monochrome-mode .devlog-meta { color: #777; }
 
+body.monochrome-mode .devlog-form {
+    background: #080808;
+    border-color: #222;
+}
+body.monochrome-mode .devlog-form h3 { color: #fff; }
+body.monochrome-mode .devlog-form label { color: #aaa; }
+body.monochrome-mode .devlog-form input[type="text"],
+body.monochrome-mode .devlog-form textarea {
+    background: #000;
+    border-color: #333;
+    color: #e0e0e0;
+}
+body.monochrome-mode .devlog-form input:focus,
+body.monochrome-mode .devlog-form textarea:focus { border-color: #fff; box-shadow: none; }
+body.monochrome-mode .devlog-form input::placeholder,
+body.monochrome-mode .devlog-form textarea::placeholder { color: #444; }
+
 body.monochrome-mode aside {
     background: #000000;
 }
