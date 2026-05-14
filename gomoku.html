@@ -981,13 +981,16 @@
     // ---- Public matchmaking ----
     let myHostedGameId = null;
 
-    async function loadLobbies() {
-        const { data: lobbies } = await sb
-            .from('gomoku_games')
-            .select('id, black_player, created_at')
-            .eq('status', 'waiting')
-            .eq('is_public', true)
-            .order('created_at', { ascending: false });
+   async function loadLobbies() {
+    const { data: lobbies } = await sb
+        .from('gomoku_games')
+        .select('id, black_player, created_at, status, is_public')
+        .eq('status', 'waiting')
+        .eq('is_public', true)
+        .order('created_at', { ascending: false });
+
+      
+setInterval(loadLobbies, 10000);
 
         const list = document.getElementById('lobbies-list');
 
