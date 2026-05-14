@@ -245,7 +245,7 @@
         body.monochrome-mode .gomoku-layout { background: #222; border-color: #222; }
         body.monochrome-mode .gomoku-sidebar { background: #0a0a0a; }
         body.monochrome-mode .gomoku-panel { border-color: #1a1a1a; }
-        body.monochrome-mode .gomoku-panel-title { color: #333; }
+        body.monochrome-mode .gomoku-panel-title { color: #aaa; }
         body.monochrome-mode .player-card { background: #0a0a0a; border-color: #222; }
         body.monochrome-mode .player-card.active-turn { background: #111; border-color: #fff; }
         body.monochrome-mode .player-name { color: #fff; }
@@ -329,8 +329,8 @@
         body.monochrome-mode .chat-bubble::after { border-top-color: #fff; }
         body.monochrome-mode .chat-bubble.opponent { background: #111; color: #fff; border-color: #333; box-shadow: 2px 2px 0 #000; }
         body.monochrome-mode .chat-bubble.opponent::after { border-top-color: #111; }
-        body.monochrome-mode #gomoku-board { border-color: #fff; box-shadow: 3px 3px 0 #333; background: #111; }
-        body.monochrome-mode .match-item { border-color: #1a1a1a; color: #555; }
+        body.monochrome-mode #gomoku-board { border-color: #1a1a18; box-shadow: 3px 3px 0 #333; background: #f5f0e0; }
+        body.monochrome-mode .match-item { border-color: #1a1a1a; color: #999; }
         body.monochrome-mode .match-challenger { color: #fff; }
         body.monochrome-mode .ping-display { background: #0a0a0a; border-color: #1a1a1a; }
         body.monochrome-mode .challenge-form { background: #0a0a0a; border-color: #222; }
@@ -339,7 +339,7 @@
         body.monochrome-mode .win-overlay h3 { color: #fff; }
         body.monochrome-mode #menu-avatar { background: #fff; color: #000; box-shadow: 2px 2px 0 #333; }
         body.monochrome-mode #menu-username { color: #fff; }
-        body.monochrome-mode #menu-record { color: #555; }
+        body.monochrome-mode #menu-record { color: #888; }
         body.monochrome-mode [style*="background:#fff"][style*="border:1px solid #e8e4de"] {
             background: #0a0a0a !important;
             border-color: #333 !important;
@@ -531,11 +531,11 @@
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         // Background
-        ctx.fillStyle = mono ? '#111' : '#f5f0e0';
+        ctx.fillStyle = '#f5f0e0';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         // Grid lines
-        ctx.strokeStyle = mono ? '#333' : '#c8b89a';
+        ctx.strokeStyle = '#c8b89a';
         ctx.lineWidth = 0.8;
         for (let i = 0; i < BOARD_SIZE; i++) {
             const x = CELL / 2 + i * CELL;
@@ -546,7 +546,7 @@
 
         // Star points (standard gomoku dots)
         const stars = [[3,3],[3,11],[7,7],[11,3],[11,11]];
-        ctx.fillStyle = mono ? '#555' : '#a09070';
+        ctx.fillStyle = '#a09070';
         stars.forEach(([r, c]) => {
             ctx.beginPath();
             ctx.arc(CELL / 2 + c * CELL, CELL / 2 + r * CELL, 3, 0, Math.PI * 2);
@@ -569,18 +569,18 @@
 
         if (color === 'black') {
             const grad = ctx.createRadialGradient(x - 3, y - 3, 1, x, y, STONE_R);
-            grad.addColorStop(0, mono ? '#555' : '#444');
-            grad.addColorStop(1, mono ? '#000' : '#111');
+            grad.addColorStop(0, '#444');
+            grad.addColorStop(1, '#111');
             ctx.fillStyle = grad;
         } else {
             const grad = ctx.createRadialGradient(x - 3, y - 3, 1, x, y, STONE_R);
             grad.addColorStop(0, '#fff');
-            grad.addColorStop(1, mono ? '#aaa' : '#ccc');
+            grad.addColorStop(1, '#ccc');
             ctx.fillStyle = grad;
         }
 
         ctx.fill();
-        ctx.strokeStyle = mono ? '#fff' : (color === 'black' ? '#111' : '#aaa');
+        ctx.strokeStyle = color === 'black' ? '#111' : '#aaa';
         ctx.lineWidth = 0.8;
         ctx.stroke();
     }
