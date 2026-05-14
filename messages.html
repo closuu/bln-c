@@ -263,6 +263,10 @@
         const reactionBar = document.getElementById('reaction-bar');
         reactionBar.style.display = 'flex';
         reactionBar.innerHTML = '';
+        // Apply container theme immediately on build
+        const monoInit = localStorage.getItem('theme') === 'monochrome';
+        reactionBar.style.background  = monoInit ? '#000'    : '#faf8f5';
+        reactionBar.style.borderColor = monoInit ? '#222'    : '#eee';
         REACTION_PRESETS.forEach(preset => {
             const btn = document.createElement('button');
             btn.textContent = preset.label;
