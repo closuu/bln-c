@@ -666,6 +666,8 @@
                     document.getElementById('win-overlay').classList.add('show');
                     document.getElementById('board-status').textContent = 'game over';
                     document.getElementById('resign-wrap').style.display = 'none';
+                    // Remove from public lobby
+                    await sb.from('gomoku_games').update({ is_public: false }).eq('id', gameId);
                     // Count win for remaining player
                     const newWins = (myProfile.gomoku_wins || 0) + 1;
                     await sb.from('profiles').update({ gomoku_wins: newWins }).eq('id', myId);
@@ -754,6 +756,9 @@
             winnerColor === myColor ? 'you win!' : winnerName + ' wins!';
         document.getElementById('win-overlay').classList.add('show');
         document.getElementById('board-status').textContent = 'game over';
+
+        // Remove from public lobby when game ends
+        await sb.from('gomoku_games').update({ is_public: false }).eq('id', gameId);
 
         // Each player updates only their own record to avoid RLS issues
         if (isMe) {
@@ -981,16 +986,18 @@
     // ---- Public matchmaking ----
     let myHostedGameId = null;
 
-    async function loadLobbies() {
-        const { data: lobbies } = await sb
-            .from('gomoku_games')
-            .select('id, black_player, created_at')
-            .eq('status', 'waiting')
-            .eq('is_public', true)
-            .order('created_at', { ascending: false });
+   async function loadLobbies() {
+    const { data: lobbies } = await sb
+        .from('gomoku_games')
+        .select('id, black_player, created_at, status, is_public')
+        .eq('status', 'waiting')
+        .eq('is_public', true)
+        .order('created_at', { ascending: false });
+
+      
+setInterval(loadLobbies, 10000);
 
         const list = document.getElementById('lobbies-list');
-        if (!list) return;
 
         if (!lobbies || lobbies.length === 0) {
             list.innerHTML = '<p style="padding:10px 12px; font-size:0.75em; color:#ccc;">No open lobbies right now.</p>';
@@ -1149,21 +1156,19 @@
         loadLobbies();
     });
 
-    document.getElementById('refresh-lobbies-btn').addEventListener('click', loadLobbies);
+  document.getElementById('refresh-lobbies-btn').addEventListener('click', loadLobbies);
 
-    // Live sync — no filter so all game changes trigger a refresh
-    sb.channel('public-lobbies')
-        .on('postgres_changes', {
-            event: '*',
-            schema: 'public',
-            table: 'gomoku_games'
-        }, () => {
-            loadLobbies();
-        })
-        .subscribe();
 
-    // Fallback poll every 8 seconds
-    setInterval(loadLobbies, 8000);
+sb.channel('public-lobbies')
+    .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'gomoku_games',
+        filter: 'is_public=eq.true'
+    }, () => {
+        loadLobbies();
+    })
+    .subscribe();
 
     // ---- Init ----
     (async () => {
@@ -1210,6 +1215,22 @@
             .eq('black_player', myId)
             .eq('status', 'waiting')
             .eq('is_public', true);
+
+        // Delete hosted lobby when user closes/refreshes tab
+        window.addEventListener('beforeunload', () => {
+            if (!myHostedGameId) return;
+            const url = `${SUPABASE_URL}/rest/v1/gomoku_games?id=eq.${myHostedGameId}&black_player=eq.${myId}&status=eq.waiting`;
+            navigator.sendBeacon(url, new Blob([], { type: 'application/json' }));
+            fetch(url, {
+                method: 'DELETE',
+                headers: {
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+                    'Content-Type': 'application/json'
+                },
+                keepalive: true
+            }).catch(() => {});
+        });
     })();
     </script>
     <script>
