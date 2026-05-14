@@ -458,6 +458,12 @@
                             </div>
                         </div>
 
+                        <!-- Reactions -->
+                        <div class="gomoku-panel" id="reaction-panel" style="display:none;">
+                            <div class="gomoku-panel-title">reactions</div>
+                            <div class="reaction-bar visible" id="reaction-bar" style="justify-content:flex-start;"></div>
+                        </div>
+
                         <!-- Incoming challenges -->
                         <div class="gomoku-panel" style="flex:1;">
                             <div class="gomoku-panel-title">incoming challenges</div>
@@ -473,9 +479,6 @@
                         <div class="board-status" id="board-status">waiting for opponent...</div>
                         <div id="resign-wrap" style="display:none; margin-bottom:8px;">
                             <button id="resign-btn" style="font-size:0.72em; padding:4px 12px; background:transparent; border-color:#ccc; color:#aaa;">Resign</button>
-                        </div>
-                        <!-- Reaction bar (shown when in game) -->
-                        <div class="reaction-bar" id="reaction-bar">
                         </div>
 
                         <div class="board-wrap">
@@ -702,7 +705,7 @@
             });
             bar.appendChild(btn);
         });
-        bar.classList.add('visible');
+        document.getElementById('reaction-panel').style.display = 'block';
     }
 
     function showBubble(text, side) {
@@ -766,6 +769,9 @@
             })
             .on('broadcast', { event: 'pong' }, () => {
                 if (pingStart) updatePingDisplay(Date.now() - pingStart);
+            })
+            .on('broadcast', { event: 'react' }, ({ payload }) => {
+                if (payload?.value) showBubble(payload.value, 'opponent');
             })
             .on('broadcast', { event: 'rematch' }, () => {
                 endGame();
@@ -915,6 +921,7 @@
         myColor  = null;
         gameOver = false;
         board    = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(null));
+        document.getElementById('reaction-panel').style.display = 'none';
         if (channel) { channel.unsubscribe(); channel = null; }
         drawBoard();
     }
@@ -984,7 +991,8 @@
         // If we already sent a challenge, cancel our pending game first
         if (gameId && gameId !== gId) {
             await sb.from('gomoku_games').delete().eq('id', gameId).eq('black_player', myId).eq('status', 'waiting');
-            if (channel) { channel.unsubscribe(); channel = null; }
+            document.getElementById('reaction-panel').style.display = 'none';
+        if (channel) { channel.unsubscribe(); channel = null; }
         }
 
         gameId      = gId;
