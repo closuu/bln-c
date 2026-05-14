@@ -832,8 +832,8 @@ body.monochrome-mode::after {
         0deg,
         transparent,
         transparent 2px,
-        rgba(0, 0, 0, 0.18) 2px,
-        rgba(0, 0, 0, 0.18) 4px
+        rgba(0, 0, 0, 0.06) 2px,
+        rgba(0, 0, 0, 0.06) 4px
     );
 }
 
@@ -913,7 +913,7 @@ body.monochrome-mode .stat-number {
 
 body.monochrome-mode .stat-number.warning { color: #ccc; text-shadow: none; }
 body.monochrome-mode .stat-trend.positive { color: #ccc; }
-body.monochrome-mode .stat-trend.negative { color: #888; }
+body.monochrome-mode .stat-trend.negative { color: #aaa; }
 
 body.monochrome-mode .table-container {
     background: #080808;
@@ -922,7 +922,7 @@ body.monochrome-mode .table-container {
 
 body.monochrome-mode .admin-table th {
     border-bottom-color: #444;
-    color: #888;
+    color: #aaa;
 }
 
 body.monochrome-mode .admin-table td { border-bottom-color: #333; }
@@ -968,7 +968,7 @@ body.monochrome-mode .devlog-entry {
     border-left-color: #fff;
 }
 body.monochrome-mode .devlog-entry h3 { color: #fff; }
-body.monochrome-mode .devlog-meta { color: #444; }
+body.monochrome-mode .devlog-meta { color: #777; }
 
 body.monochrome-mode aside {
     background: #000000;
@@ -991,7 +991,7 @@ body.monochrome-mode form select:focus {
     box-shadow: 0 0 0 2px rgba(255,255,255,0.1);
 }
 
-body.monochrome-mode form label { color: #888; }
+body.monochrome-mode form label { color: #aaa; }
 
 body.monochrome-mode .library-badge {
     background: #fff;
@@ -1045,7 +1045,7 @@ body.monochrome-mode .game-card-thumb-placeholder {
 }
 
 body.monochrome-mode .gomoku-panel-title {
-    color: #444;
+    color: #aaa;
 }
 
 body.monochrome-mode .player-name {
@@ -1053,7 +1053,7 @@ body.monochrome-mode .player-name {
 }
 
 body.monochrome-mode .player-record {
-    color: #555;
+    color: #888;
 }
 
 body.monochrome-mode .match-challenger {
@@ -1061,12 +1061,12 @@ body.monochrome-mode .match-challenger {
 }
 
 body.monochrome-mode .match-item {
-    color: #555;
+    color: #999;
     border-color: #1a1a1a;
 }
 
 body.monochrome-mode .turn-indicator {
-    color: #aaa;
+    color: #ccc;
 }
 
 
@@ -1271,7 +1271,7 @@ body.monochrome-mode .rating-btn.selected { background: #fff; color: #000; borde
 body.monochrome-mode .reaction-pill { background: #0a0a0a; border-color: #333; color: #555; }
 body.monochrome-mode .reaction-pill:hover,
 body.monochrome-mode .reaction-pill.reacted { background: #fff; color: #000; border-color: #fff; }
-body.monochrome-mode .ascii-graph { color: #555; border-color: #222; }
+body.monochrome-mode .ascii-graph { color: #888; border-color: #222; }
 body.monochrome-mode .rmw-badge.best { color: #fff; border-color: #fff; }
 body.monochrome-mode .rmw-badge.worst { color: #444; border-color: #333; }
 body.monochrome-mode .rmw-form h3 { color: #fff; }
