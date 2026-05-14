@@ -1148,7 +1148,19 @@
         loadLobbies();
     });
 
-    document.getElementById('refresh-lobbies-btn').addEventListener('click', loadLobbies);
+  document.getElementById('refresh-lobbies-btn').addEventListener('click', loadLobbies);
+
+
+sb.channel('public-lobbies')
+    .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'gomoku_games',
+        filter: 'is_public=eq.true'
+    }, () => {
+        loadLobbies();
+    })
+    .subscribe();
 
     // ---- Init ----
     (async () => {
