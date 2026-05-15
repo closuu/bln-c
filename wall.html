@@ -86,9 +86,10 @@
     let lastX = 0, lastY = 0;
     let undoStack = []; // stores snapshots before each stroke
 
-    ctx.fillStyle = '#ffffff';
+    const initMono = localStorage.getItem('theme') === 'monochrome';
+    ctx.fillStyle = initMono ? '#000000' : '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = '#000000';
+    ctx.strokeStyle = initMono ? '#ffffff' : '#000000';
     ctx.lineJoin = 'round';
     ctx.lineCap  = 'round';
 
@@ -161,7 +162,7 @@
 
     document.getElementById('clear-btn').addEventListener('click', () => {
         saveSnapshot();
-        ctx.fillStyle = '#ffffff';
+        ctx.fillStyle = localStorage.getItem('theme') === 'monochrome' ? '#000000' : '#ffffff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
     });
 
@@ -240,6 +241,10 @@
                     c.style.filter     = isMonochrome ? 'invert(1)' : 'invert(0)';
                     c.style.background = isMonochrome ? '#000' : '#fff';
                 });
+                // Also repaint the drawing canvas background
+                ctx.fillStyle = isMonochrome ? '#000000' : '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.strokeStyle = isMonochrome ? '#ffffff' : '#000000';
             }, 100);
         });
     }
@@ -280,7 +285,7 @@
                 } else {
                     msgEl.style.color = '#668866';
                     msgEl.textContent = 'Submitted! Waiting for admin approval.';
-                    ctx.fillStyle = '#ffffff';
+                    ctx.fillStyle = localStorage.getItem('theme') === 'monochrome' ? '#000000' : '#ffffff';
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
                 }
             });
