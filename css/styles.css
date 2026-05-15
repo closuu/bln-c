@@ -987,6 +987,19 @@ body.monochrome-mode .devlog-form textarea:focus { border-color: #fff; box-shado
 body.monochrome-mode .devlog-form input::placeholder,
 body.monochrome-mode .devlog-form textarea::placeholder { color: #444; }
 
+body.monochrome-mode .tracker-container input[type="text"] {
+    background: #000;
+    border-color: #333;
+    color: #e0e0e0;
+}
+body.monochrome-mode .tracker-container input:focus { border-color: #fff; }
+body.monochrome-mode .tracker-container input::placeholder { color: #444; }
+
+body.monochrome-mode .draw-area {
+    background: #000;
+    border-color: #333;
+}
+
 body.monochrome-mode aside {
     background: #000000;
 }
