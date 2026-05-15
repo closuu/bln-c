@@ -13,12 +13,127 @@
             text-align: left;
         }
 
+        .hero-image-wrap {
+            position: relative;
+            display: inline-block;
+            padding: 12px;
+            width: 75%;
+        }
+
+        /* bitmap L-bracket — upper left */
+        .hero-image-wrap::before {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 2px;
+            height: 2px;
+            background: #1a1a18;
+            box-shadow:
+                0px  0px 0 0px #1a1a18,
+                2px  0px 0 0px #1a1a18,
+                4px  0px 0 0px #1a1a18,
+                6px  0px 0 0px #1a1a18,
+                8px  0px 0 0px #1a1a18,
+                10px 0px 0 0px #1a1a18,
+                12px 0px 0 0px #1a1a18,
+                14px 0px 0 0px #1a1a18,
+                16px 0px 0 0px #1a1a18,
+                0px  2px 0 0px #1a1a18,
+                0px  4px 0 0px #1a1a18,
+                0px  6px 0 0px #1a1a18,
+                0px  8px 0 0px #1a1a18,
+                0px 10px 0 0px #1a1a18,
+                0px 12px 0 0px #1a1a18,
+                0px 14px 0 0px #1a1a18,
+                0px 16px 0 0px #1a1a18;
+            image-rendering: pixelated;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        /* bitmap L-bracket — lower right */
+        .hero-image-wrap::after {
+            content: '';
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            width: 2px;
+            height: 2px;
+            background: #1a1a18;
+            box-shadow:
+                0px    0px 0 0px #1a1a18,
+                -2px   0px 0 0px #1a1a18,
+                -4px   0px 0 0px #1a1a18,
+                -6px   0px 0 0px #1a1a18,
+                -8px   0px 0 0px #1a1a18,
+                -10px  0px 0 0px #1a1a18,
+                -12px  0px 0 0px #1a1a18,
+                -14px  0px 0 0px #1a1a18,
+                -16px  0px 0 0px #1a1a18,
+                0px  -2px 0 0px #1a1a18,
+                0px  -4px 0 0px #1a1a18,
+                0px  -6px 0 0px #1a1a18,
+                0px  -8px 0 0px #1a1a18,
+                0px -10px 0 0px #1a1a18,
+                0px -12px 0 0px #1a1a18,
+                0px -14px 0 0px #1a1a18,
+                0px -16px 0 0px #1a1a18;
+            image-rendering: pixelated;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        /* monochrome overrides */
+        body.monochrome-mode .hero-image-wrap::before {
+            background: #fff;
+            box-shadow:
+                0px  0px 0 0px #fff,
+                2px  0px 0 0px #fff,
+                4px  0px 0 0px #fff,
+                6px  0px 0 0px #fff,
+                8px  0px 0 0px #fff,
+                10px 0px 0 0px #fff,
+                12px 0px 0 0px #fff,
+                14px 0px 0 0px #fff,
+                16px 0px 0 0px #fff,
+                0px  2px 0 0px #fff,
+                0px  4px 0 0px #fff,
+                0px  6px 0 0px #fff,
+                0px  8px 0 0px #fff,
+                0px 10px 0 0px #fff,
+                0px 12px 0 0px #fff,
+                0px 14px 0 0px #fff,
+                0px 16px 0 0px #fff;
+        }
+        body.monochrome-mode .hero-image-wrap::after {
+            background: #fff;
+            box-shadow:
+                0px    0px 0 0px #fff,
+                -2px   0px 0 0px #fff,
+                -4px   0px 0 0px #fff,
+                -6px   0px 0 0px #fff,
+                -8px   0px 0 0px #fff,
+                -10px  0px 0 0px #fff,
+                -12px  0px 0 0px #fff,
+                -14px  0px 0 0px #fff,
+                -16px  0px 0 0px #fff,
+                0px  -2px 0 0px #fff,
+                0px  -4px 0 0px #fff,
+                0px  -6px 0 0px #fff,
+                0px  -8px 0 0px #fff,
+                0px -10px 0 0px #fff,
+                0px -12px 0 0px #fff,
+                0px -14px 0 0px #fff,
+                0px -16px 0 0px #fff;
+        }
+
         .hero-image {
+            width: 100%;
             max-width: 100%;
             height: auto;
             display: block;
             margin-bottom: 0;
-            border: 1px solid #ccc;
             image-rendering: pixelated;
         }
 
@@ -134,7 +249,7 @@
         body.monochrome-mode .feat-desc { color: #ccc; }
         body.monochrome-mode .feat-tag { color: #aaa; border-color: #aaa; }
         body.monochrome-mode .blnc-panel-footer { background: #000; border-color: #222; color: #666; }
-        body.monochrome-mode .hero-image { border-color: #333; }
+        body.monochrome-mode .hero-image { border: none; }
         body.monochrome-mode .description p { color: #ccc; }
         body.monochrome-mode .description p strong { color: #fff; }
         body.monochrome-mode .description h3 { color: #aaa; }
@@ -176,7 +291,9 @@
             <p id="typed-sub" style="min-height:28px;"><span id="typed-desc"></span></p>
 
             <section class="hero-section">
-                <img src="images/npgr.png" alt="Website Banner" class="hero-image">
+                <div class="hero-image-wrap">
+                    <img src="images/npgr.png" alt="Website Banner" class="hero-image">
+                </div>
 
                 <div class="description">
                     <h3>Personalized Learning Tips?</h3>
@@ -264,7 +381,6 @@
             });
             new Typed('#typed-desc', {
                  strings: [
-
                     'bln-c means blank canvas.',
                     'the dash are just there to look cooler.',
                     'lighter than ave. persons attention span.',
@@ -305,7 +421,6 @@
             });
             overlay.addEventListener('click', closeNav);
 
-            
             sidebar.querySelectorAll('a').forEach(function (a) {
                 a.addEventListener('click', closeNav);
             });
