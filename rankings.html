@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gomoku Rankings - bln-c</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+</head>
+<body>
+    <button id="nav-toggle" aria-label="Toggle navigation"><span></span><span></span><span></span></button>
+    <div id="nav-overlay"></div>
+
+    <header><h1>bln-c - gomoku rankings</h1></header>
+
+    <div class="container">
+        <aside>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="games.html">Catalogue</a></li>
+                    <li><a href="tracker.html">mini notepad</a></li>
+                    <li><a href="devlog.html">Devlog</a></li>
+                    <li><a href="rate.html">Rate My Week</a></li>
+                    <li><a href="wall.html">Sticky Wall</a></li>
+                    <li><a href="messages.html">Messages</a></li>
+                    <li><a href="gomoku.html">Gomoku</a></li>
+                    <li><a href="rankings.html">Rankings</a></li>
+                    <br>
+                    <li><a href="login.html">Login</a></li>
+                    <li><a href="register.html">Registration</a></li>
+                </ul>
+            </nav>
+            <button id="theme-toggle">Toggle Monochrome</button>
+        </aside>
+
+        <main>
+            <h2>gomoku rankings</h2>
+            <p>shows who's currently on top.</p>
+
+            <div id="rankings-wrap">
+                <p style="color:#bbb; font-size:0.85em; margin-top:20px;">Loading rankings...</p>
+            </div>
+        </main>
+    </div>
+
+     <footer><p>&copy; 2026 - CaziWorks - qobble</p></footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/script.js"></script>
+    <script>
+    (async () => {
+        const wrap = document.getElementById('rankings-wrap');
+
+        // Fetch all profiles that have played at least one gomoku game
+        const { data: players, error } = await sb
+            .from('profiles')
+            .select('id, username, avatar_url, gomoku_wins, gomoku_losses, gomoku_show_record')
+            .order('gomoku_wins', { ascending: false, nullsFirst: false });
+
+        // Filter client-side: only players with at least 1 game
+        const ranked = (players || []).filter(p => (p.gomoku_wins || 0) + (p.gomoku_losses || 0) > 0);
+
+        if (error || ranked.length === 0) {
+            wrap.innerHTML = '<p style="color:#bbb; font-size:0.85em; margin-top:20px;">No ranked players yet. Play some Gomoku!</p>';
+            return;
+        }
+
+        // Sort: wins desc, then losses asc as tiebreaker
+        ranked.sort((a, b) => {
+            const wa = a.gomoku_wins  || 0, wb = b.gomoku_wins  || 0;
+            const la = a.gomoku_losses || 0, lb = b.gomoku_losses || 0;
+            if (wb !== wa) return wb - wa;
+            return la - lb;
+        });
+
+        const rankClass = (i) => i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : '';
+        const rankSymbol = (i) => i === 0 ? '1' : i === 1 ? '2' : i === 2 ? '3' : (i + 1);
+
+        const rows = ranked.map((p, i) => {
+            const wins   = p.gomoku_wins   || 0;
+            const losses = p.gomoku_losses || 0;
+            const total  = wins + losses;
+            const wr     = total > 0 ? Math.round((wins / total) * 100) : 0;
+            const hidden = p.gomoku_show_record === false;
+
+            const avatarHTML = p.avatar_url
+                ? `<img src="${p.avatar_url}" alt="" onerror="this.style.display='none'">`
+                : (p.username || '?')[0].toUpperCase();
+
+            return `
+                <tr class="${rankClass(i)}">
+                    <td><span class="rank-num">${rankSymbol(i)}</span></td>
+                    <td>
+                        <div class="rank-player">
+                            <div class="rank-avatar">${avatarHTML}</div>
+                            <span class="rank-username">${p.username || '—'}</span>
+                        </div>
+                    </td>
+                    <td class="${hidden ? 'rank-hidden' : 'rank-wins'}">
+                        ${hidden ? 'hidden' : wins}
+                    </td>
+                    <td class="${hidden ? 'rank-hidden' : 'rank-losses'}">
+                        ${hidden ? 'hidden' : losses}
+                    </td>
+                    <td>
+                        ${hidden
+                            ? '<span class="rank-hidden">—</span>'
+                            : `<div class="winrate-bar-wrap">
+                                <div class="winrate-bar-fill" style="width:${wr}%"></div>
+                               </div>
+                               <span style="font-size:0.72em; color:#bbb; margin-left:6px;">${wr}%</span>`
+                        }
+                    </td>
+                    <td style="font-size:0.78em; color:#bbb;">${total > 0 ? total : '—'}</td>
+                </tr>`;
+        }).join('');
+
+        wrap.innerHTML = `
+            <table class="rankings-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Player</th>
+                        <th>Wins</th>
+                        <th>Losses</th>
+                        <th>Win rate</th>
+                        <th>Games</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>`;
+    })();
+    </script>
+    <script>
+        (function () {
+            var toggle  = document.getElementById('nav-toggle');
+            var overlay = document.getElementById('nav-overlay');
+            var sidebar = document.querySelector('aside');
+            if (!toggle || !sidebar) return;
+            function openNav()  { toggle.classList.add('open'); sidebar.classList.add('open'); overlay.classList.add('open'); document.body.style.overflow = 'hidden'; }
+            function closeNav() { toggle.classList.remove('open'); sidebar.classList.remove('open'); overlay.classList.remove('open'); document.body.style.overflow = ''; }
+            toggle.addEventListener('click', function () { sidebar.classList.contains('open') ? closeNav() : openNav(); });
+            overlay.addEventListener('click', closeNav);
+            sidebar.querySelectorAll('a').forEach(function (a) { a.addEventListener('click', closeNav); });
+        })();
+    </script>
+</body>
+</html>
