@@ -1099,6 +1099,32 @@ body.monochrome-mode .turn-indicator {
     color: #ccc;
 }
 
+body.monochrome-mode .rankings-table td {
+    color: #ffffff;
+    border-color: #1a1a1a;
+}
+
+body.monochrome-mode .rank-wins {
+    color: #ffffff !important;
+}
+
+body.monochrome-mode .rank-losses {
+    color: #aaaaaa !important;
+}
+
+body.monochrome-mode .rank-hidden {
+    color: #444 !important;
+}
+
+body.monochrome-mode .rankings-table td span,
+body.monochrome-mode .rankings-table td div {
+    color: #ffffff;
+}
+
+body.monochrome-mode .rankings-table th {
+    color: #444;
+}
+
 
 /* ============================================================
    --- RATE MY WEEK
@@ -1895,4 +1921,145 @@ body.monochrome-mode #spider-section > div {
 
 body.monochrome-mode #spider-section [style*="background:#faf8f5"] {
     background: #0a0a0a !important;
+}
+/* ============================================================
+   --- GOMOKU RANKINGS PAGE
+   ============================================================ */
+
+.rankings-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 16px;
+    border: 1px solid #ddd;
+}
+
+.rankings-table th {
+    background: #f5f3ef;
+    color: #bbb;
+    font-size: 0.65em;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+    font-weight: normal;
+}
+
+.rankings-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid #f0ede8;
+    vertical-align: middle;
+    font-size: 0.88em;
+    color: #555;
+}
+
+.rankings-table tbody tr:hover {
+    background: #faf8f5;
+}
+
+/* Rank number */
+.rank-num {
+    font-size: 1em;
+    color: #ccc;
+    width: 36px;
+    text-align: center;
+}
+
+/* Top 3 highlights */
+.rankings-table tbody tr.rank-1 {
+    background: #fffff8;
+    border-left: 3px solid #b8a040;
+}
+.rankings-table tbody tr.rank-1 .rank-num { color: #b8a040; font-size: 1.1em; }
+
+.rankings-table tbody tr.rank-2 {
+    background: #f8f8f8;
+    border-left: 3px solid #888;
+}
+.rankings-table tbody tr.rank-2 .rank-num { color: #888; font-size: 1.05em; }
+
+.rankings-table tbody tr.rank-3 {
+    background: #fff8f5;
+    border-left: 3px solid #a0704a;
+}
+.rankings-table tbody tr.rank-3 .rank-num { color: #a0704a; }
+
+/* Player cell */
+.rank-player {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.rank-avatar {
+    width: 34px;
+    height: 34px;
+    background: #1a1a18;
+    color: #f0ede8;
+    font-size: 0.82em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.rank-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.rank-username {
+    color: #1a1a18;
+    font-size: 0.95em;
+}
+
+/* W/L cells */
+.rank-wins   { color: #668866; }
+.rank-losses { color: #cc8888; }
+.rank-hidden { color: #ddd; font-style: italic; font-size: 0.8em; }
+
+/* Win rate bar */
+.winrate-bar-wrap {
+    width: 80px;
+    height: 6px;
+    background: #eee;
+    border-radius: 0;
+    overflow: hidden;
+}
+
+.winrate-bar-fill {
+    height: 100%;
+    background: #1a1a18;
+    transition: width 0.4s ease;
+}
+
+/* Monochrome */
+body.monochrome-mode .rankings-table { border-color: #222; }
+body.monochrome-mode .rankings-table th { background: #000; border-color: #222; color: #fff; }
+body.monochrome-mode .rankings-table td { border-color: #1a1a1a; color: #555; }
+body.monochrome-mode .rankings-table tbody tr:hover { background: #0d0d0b; }
+
+body.monochrome-mode .rankings-table tbody tr.rank-1 { background: #0a0a08; border-left-color: #b8a040; }
+body.monochrome-mode .rankings-table tbody tr.rank-2 { background: #080808; border-left-color: #555; }
+body.monochrome-mode .rankings-table tbody tr.rank-3 { background: #0a0806; border-left-color: #7a5030; }
+
+body.monochrome-mode .rank-num { color: #333; }
+body.monochrome-mode .rankings-table tbody tr.rank-1 .rank-num { color: #b8a040; }
+body.monochrome-mode .rankings-table tbody tr.rank-2 .rank-num { color: #555; }
+body.monochrome-mode .rankings-table tbody tr.rank-3 .rank-num { color: #7a5030; }
+
+body.monochrome-mode .rank-avatar { background: #333; color: #f0ede8; }
+body.monochrome-mode .rank-username { color: #fff; }
+body.monochrome-mode .rank-wins   { color: #aaa; }
+body.monochrome-mode .rank-losses { color: #666; }
+body.monochrome-mode .rank-hidden { color: #333; }
+body.monochrome-mode .winrate-bar-wrap { background: #222; }
+body.monochrome-mode .winrate-bar-fill { background: #fff; }
+
+@media (max-width: 768px) {
+    .rankings-table th:nth-child(5),
+    .rankings-table td:nth-child(5) { display: none; } /* hide winrate bar on mobile */
+    .rank-avatar { width: 28px; height: 28px; }
 }
