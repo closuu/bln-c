@@ -50,7 +50,7 @@ bln-c is a multi-feature personal website built with plain html, css, and javasc
 
 | layer | tool |
 |---|---|
-| hosting | github pages (free, static) |
+| hosting | github pages (free) |
 | database | supabase (postgresql) |
 | auth | supabase auth |
 | real-time | supabase realtime (broadcast + presence) |
