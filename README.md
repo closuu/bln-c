@@ -83,11 +83,11 @@ bln-c is a multi-feature personal website built with plain html, css, and javasc
 ## setup
 
 1. create a [supabase](https://supabase.com) project
-2. run the sql table setup scripts (see tutorial)
-3. copy your **Project URL** and **anon key** into `js/supabase-config.js`
+2. run the sql table setup scripts 
+3. copy **Project URL** and **anon key** into `js/supabase-config.js`
 4. push all files to a GitHub repo
 5. enable **github pages** (settings → pages → deploy from branch: main)
-6. add your github pages URL to supabase → authentication → URL Configuration
+6. add github pages URL to supabase → authentication → URL Configuration
 
 ---
 
