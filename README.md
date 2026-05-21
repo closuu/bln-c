@@ -41,7 +41,7 @@ bln-c is a multi-feature personal website built with plain html, css, and javasc
 - **gomoku** — real-time multiplayer board game; challenge by username, in-game kaomoji reactions, resign, rematch, win/loss tracking
 - **rankings** — gomoku leaderboard ranked by wins with win rate bar
 - **monochrome mode** — full site-wide oled black theme toggle, persists across sessions
-- **sound effects** — procedural web audio api sounds for every interaction, with mute toggle
+- **sound effects** — procedural web audio api sounds for every interaction.
 - **mobile responsive** — hamburger nav, touch canvas drawing, responsive layouts
 
 ---
