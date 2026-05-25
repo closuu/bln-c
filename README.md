@@ -5,7 +5,7 @@
 > **this project is not open source and is not free to use.**
 > it's shared here for inspiration only. please don't copy, redistribute, or repurpose the code without permission.
 
-bln-c is a multi-feature personal website built with plain html, css, and javascript — no frameworks. it runs on [github pages](https://pages.github.com) for hosting and [supabase](https://supabase.com) for the database, authentication, and real-time features — dynamic content powered by supabase on the frontend.
+bln-c is a multi-feature personal website built with plain html, css, and javascript. no frameworks. it runs on [github pages](https://pages.github.com) for hosting and [supabase](https://supabase.com) for the database, authentication, and real-time features — dynamic content powered by supabase on the frontend.
 
 ---
 
