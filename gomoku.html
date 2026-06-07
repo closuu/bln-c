@@ -875,30 +875,32 @@
         if (wrap) wrap.classList.toggle('urgent-wrap', urgent);
     }
 
-    async function passTurn() {
-        // Guard: only pass if it's still genuinely my turn and game is live
-        if (gameOver || myColor !== currentTurn) return;
+async function passTurn() {
+    if (gameOver || myColor !== currentTurn) return;
 
-        currentTurn = currentTurn === 'black' ? 'white' : 'black';
-        drawBoard();
-        updateTurnUI();
+    stopBlitzTimer();
+    currentTurn = currentTurn === 'black' ? 'white' : 'black';
 
-        await channel.send({
-            type: 'broadcast', event: 'pass',
-            payload: { turn: currentTurn, isBlitz: true }
-        });
+    // Update board status
+    document.getElementById('board-status').textContent = 'you ran out of time — opponent\'s turn.';
 
-        await sb.from('gomoku_games').update({
-            current_turn: currentTurn,
-            updated_at: new Date().toISOString()
-        }).eq('id', gameId);
+    // Disable canvas — not my turn anymore
+    canvas.classList.add('disabled');
+    document.getElementById(`turn-${myColor}`).style.display = 'none';
 
-        document.getElementById('board-status').textContent =
-            'turn skipped! opponent timed out.';
+    // Broadcast to opponent
+    await channel.send({
+        type: 'broadcast', event: 'pass',
+        payload: { turn: currentTurn }
+    });
 
-        if (typeof SFX !== 'undefined') SFX.formError();
-    }
+    await sb.from('gomoku_games').update({
+        current_turn: currentTurn,
+        updated_at: new Date().toISOString()
+    }).eq('id', gameId);
 
+    if (typeof SFX !== 'undefined') SFX.formError();
+}
     // ---- Reactions ----
     const REACTIONS = [
         { label: ':Þ',          value: ':Þ' },
@@ -1009,6 +1011,18 @@
             .on('broadcast', { event: 'react' }, ({ payload }) => {
                 if (payload?.value) showBubble(payload.value, 'opponent');
             })
+
+            .on('broadcast', { event: 'pass' }, ({ payload }) => {
+    currentTurn = payload.turn;
+    // It's now my turn — enable canvas and start my timer
+    canvas.classList.remove('disabled');
+    document.getElementById('board-status').textContent = 'your turn — place a stone';
+    document.getElementById(`turn-${myColor}`).style.display = 'block';
+    if (selectedMode === 'blitz') {
+        startBlitzTimer();
+    }
+})
+            
             .on('broadcast', { event: 'rematch' }, () => {
                 endGame();
             })
