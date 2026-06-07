@@ -800,12 +800,16 @@
     }
 
     function updateTurnUI() {
+        // Sound when it becomes your turn
+        if (!gameOver && myColor === currentTurn && typeof SFX !== 'undefined') {
+            SFX.yourTurn();
+        }
+
         ['black','white'].forEach(side => {
             const card = document.getElementById(`card-${side}`);
             const turn = document.getElementById(`turn-${side}`);
             if (currentTurn === side) {
                 card.classList.add('active-turn');
-                // Only show "your turn" if that side is you
                 if (myColor === side) turn.style.display = 'block';
             } else {
                 card.classList.remove('active-turn');
@@ -818,7 +822,18 @@
             canvas.classList.toggle('disabled', !isMyTurn);
             document.getElementById('board-status').textContent = isMyTurn
                 ? 'your turn — place a stone'
-                : `waiting for opponent...`;
+                : 'waiting for opponent...';
+        }
+
+        // Blitz timer — only run on MY turn
+        if (selectedMode === 'blitz' && !gameOver) {
+            if (myColor === currentTurn) {
+                startBlitzTimer();
+            } else {
+                stopBlitzTimer();
+                blitzSecsLeft = BLITZ_TURN_SECS;
+                updateBlitzDisplay();
+            }
         }
     }
 
@@ -1026,8 +1041,13 @@
         const timerWrap = document.getElementById('blitz-timer-wrap');
         if (selectedMode === 'blitz') {
             timerWrap.classList.add('active');
+            // Kick off timer immediately for whoever's turn it is
+            if (myColor === currentTurn) {
+                startBlitzTimer();
+            }
         } else {
             timerWrap.classList.remove('active');
+            stopBlitzTimer();
         }
     }
 
@@ -1070,6 +1090,7 @@
         const won = checkWin(pos.r, pos.c, myColor);
         currentTurn = currentTurn === 'black' ? 'white' : 'black';
 
+        stopBlitzTimer(); // stop my timer — opponent's updateTurnUI will start theirs
         drawBoard();
         updateTurnUI();
 
