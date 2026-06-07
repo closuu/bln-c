@@ -253,39 +253,73 @@
         body.monochrome-mode .board-area { background: #0a0a0a; }
 
         /* ---- Blitz timer ---- */
+        @keyframes blink-indicator {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0; }
+        }
+
         .blitz-timer-wrap {
             display: none;
             align-items: center;
             gap: 10px;
-            margin-bottom: 10px;
-            padding: 8px 14px;
-            background: #f5f3ef;
-            border: 1px solid #ddd;
+            margin-bottom: 12px;
+            padding: 10px 16px;
+            background: #fff;
+            border: 1px solid #e8e4de;
             border-left: 3px solid #1a1a18;
-            font-size: 0.82em;
+            width: 100%;
+            max-width: 450px;
+            box-sizing: border-box;
         }
         .blitz-timer-wrap.active { display: flex; }
-        .blitz-timer-label { color: #bbb; letter-spacing: 2px; font-size: 0.8em; text-transform: uppercase; }
+        .blitz-timer-wrap.urgent-wrap {
+            border-left-color: #dc143c;
+            background: #fff5f5;
+        }
+
+        .blitz-indicator {
+            font-size: 1em;
+            color: #1a1a18;
+            font-weight: bold;
+            width: 16px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .blitz-indicator.blinking {
+            color: #dc143c;
+            animation: blink-indicator 0.4s step-end infinite;
+        }
+
+        .blitz-timer-label {
+            color: #bbb;
+            letter-spacing: 2px;
+            font-size: 0.68em;
+            text-transform: uppercase;
+            flex-shrink: 0;
+        }
+
         .blitz-timer-val {
             color: #1a1a18;
-            font-size: 1.4em;
-            min-width: 44px;
-            text-align: center;
-            letter-spacing: 2px;
+            font-size: 1.5em;
+            min-width: 40px;
+            text-align: right;
+            letter-spacing: 1px;
+            flex-shrink: 0;
         }
-        .blitz-timer-val.urgent { color: #cc8888; }
+        .blitz-timer-val.urgent { color: #dc143c; }
+
         .blitz-turn-bar {
             flex: 1;
-            height: 4px;
+            height: 5px;
             background: #eee;
             overflow: hidden;
         }
         .blitz-turn-fill {
             height: 100%;
             background: #1a1a18;
-            transition: width 0.9s linear;
+            transition: width 0.95s linear;
         }
-        .blitz-turn-fill.urgent { background: #cc8888; }
+        .blitz-turn-fill.urgent { background: #dc143c; }
 
         /* Mode picker */
         .mode-picker {
@@ -313,12 +347,15 @@
         .mode-btn.selected { background: #1a1a18; color: #f0ede8; }
 
         body.monochrome-mode .blitz-timer-wrap { background: #0a0a0a; border-color: #333; border-left-color: #fff; }
+        body.monochrome-mode .blitz-timer-wrap.urgent-wrap { background: #0d0000; border-left-color: #dc143c; }
         body.monochrome-mode .blitz-timer-label { color: #444; }
         body.monochrome-mode .blitz-timer-val { color: #fff; }
+        body.monochrome-mode .blitz-indicator { color: #fff; }
+        body.monochrome-mode .blitz-indicator.blinking { color: #dc143c; }
         body.monochrome-mode .blitz-turn-bar { background: #222; }
         body.monochrome-mode .blitz-turn-fill { background: #fff; }
-        body.monochrome-mode .blitz-turn-fill.urgent { background: #aaa; }
-        body.monochrome-mode .blitz-timer-val.urgent { color: #aaa; }
+        body.monochrome-mode .blitz-turn-fill.urgent { background: #dc143c; }
+        body.monochrome-mode .blitz-timer-val.urgent { color: #dc143c; }
         body.monochrome-mode .mode-picker { background: #222; border-color: #222; }
         body.monochrome-mode .mode-btn { background: #0a0a0a; color: #444; }
         body.monochrome-mode .mode-btn:hover { background: #111; color: #fff; }
@@ -492,8 +529,8 @@
                 <div style="margin-bottom:14px;">
                     <p class="gomoku-panel-title" style="margin-bottom:8px;">Game mode</p>
                     <div class="mode-picker">
-                        <button class="mode-btn selected" id="mode-classic" onclick="selectMode('classic')">Classic</button>
-                        <button class="mode-btn" id="mode-blitz" onclick="selectMode('blitz')">Blitz ⚡</button>
+                        <button class="mode-btn selected" id="mode-classic" onclick="selectMode('classic')">classic</button>
+                        <button class="mode-btn" id="mode-blitz" onclick="selectMode('blitz')">blitz</button>
                     </div>
                     <p id="mode-desc" style="font-size:0.72em; color:#bbb; letter-spacing:1px;">no timer — play at your own pace.</p>
                 </div>
@@ -576,6 +613,16 @@
                         <div class="board-status" id="board-status">waiting for opponent...</div>
                         <div id="resign-wrap" style="display:none; margin-bottom:8px;">
                             <button id="resign-btn" style="font-size:0.72em; padding:4px 12px; background:transparent; border-color:#ccc; color:#aaa;">Resign</button>
+                        </div>
+
+                        <!-- Blitz timer — shown above board in blitz mode -->
+                        <div class="blitz-timer-wrap" id="blitz-timer-wrap">
+                            <span class="blitz-indicator" id="blitz-indicator">!</span>
+                            <span class="blitz-timer-label">turn timer</span>
+                            <span class="blitz-timer-val" id="blitz-timer-val">60</span>
+                            <div class="blitz-turn-bar">
+                                <div class="blitz-turn-fill" id="blitz-turn-fill" style="width:100%;"></div>
+                            </div>
                         </div>
 
                         <div class="board-wrap">
@@ -798,29 +845,42 @@
     }
 
     function updateBlitzDisplay() {
-        const val  = document.getElementById('blitz-timer-val');
-        const fill = document.getElementById('blitz-turn-fill');
+        const val       = document.getElementById('blitz-timer-val');
+        const fill      = document.getElementById('blitz-turn-fill');
+        const indicator = document.getElementById('blitz-indicator');
+        const wrap      = document.getElementById('blitz-timer-wrap');
         if (!val || !fill) return;
         val.textContent = blitzSecsLeft;
-        const pct = (blitzSecsLeft / BLITZ_TURN_SECS) * 100;
+        const pct    = (blitzSecsLeft / BLITZ_TURN_SECS) * 100;
         fill.style.width = pct + '%';
         const urgent = blitzSecsLeft <= 10;
         val.classList.toggle('urgent', urgent);
         fill.classList.toggle('urgent', urgent);
+        if (indicator) indicator.classList.toggle('blinking', urgent);
+        if (wrap) wrap.classList.toggle('urgent-wrap', urgent);
     }
 
     async function passTurn() {
-        // Force switch turn without placing a stone
+        // Guard: only pass if it's still genuinely my turn and game is live
+        if (gameOver || myColor !== currentTurn) return;
+
         currentTurn = currentTurn === 'black' ? 'white' : 'black';
+        drawBoard();
         updateTurnUI();
+
         await channel.send({
             type: 'broadcast', event: 'pass',
-            payload: { turn: currentTurn }
+            payload: { turn: currentTurn, isBlitz: true }
         });
+
         await sb.from('gomoku_games').update({
             current_turn: currentTurn,
             updated_at: new Date().toISOString()
         }).eq('id', gameId);
+
+        document.getElementById('board-status').textContent =
+            'turn skipped! opponent timed out.';
+
         if (typeof SFX !== 'undefined') SFX.formError();
     }
 
