@@ -1051,14 +1051,11 @@ async function passTurn() {
         document.getElementById('resign-wrap').style.display = 'block';
         buildReactionBar();
 
-        // Show blitz timer if blitz mode
+        // Show blitz timer wrap if blitz mode (but don't start yet for challenger)
         const timerWrap = document.getElementById('blitz-timer-wrap');
         if (selectedMode === 'blitz') {
             timerWrap.classList.add('active');
-            // Kick off timer immediately for whoever's turn it is
-            if (myColor === currentTurn) {
-                startBlitzTimer();
-            }
+            // Don't start timer here — wait for opponent to join
         } else {
             timerWrap.classList.remove('active');
             stopBlitzTimer();
@@ -1348,11 +1345,14 @@ async function passTurn() {
         // Listen for opponent accepting
         const acceptListener = sb.channel(`game_accept:${game.id}`)
             .on('broadcast', { event: 'accepted' }, async ({ payload }) => {
-                // Load opponent's full profile
                 const { data: oppProfile } = await sb.from('profiles').select('*').eq('id', payload.whiteId).single();
                 setPlayerUI('white', oppProfile || { username: payload.whiteUsername }, true);
                 canvas.classList.remove('disabled');
                 document.getElementById('board-status').textContent = 'your turn — place a stone';
+                // NOW start the timer — opponent has joined
+                if (selectedMode === 'blitz' && myColor === currentTurn) {
+                    startBlitzTimer();
+                }
                 updateTurnUI();
                 acceptListener.unsubscribe();
             })
