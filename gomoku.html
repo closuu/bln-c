@@ -35,7 +35,7 @@
             font-size: 0.62em;
             color: #bbb;
             letter-spacing: 3px;
-            text-transform: uppercase;
+            text-transform: lowercase;
             margin-bottom: 10px;
         }
 
@@ -337,7 +337,7 @@
             cursor: pointer;
             font-size: 0.78em;
             letter-spacing: 2px;
-            text-transform: uppercase;
+            text-transform: lowercase;
             color: #bbb;
             border: none;
             font-family: inherit;
@@ -455,6 +455,49 @@
             border-color: #333 !important;
             border-left-color: #fff !important;
         }
+        /* Fix: how-to-play card gray text in dark mode */
+        body.monochrome-mode .how-to-play-card {
+            background: #0a0a0a !important;
+            border-color: #333 !important;
+            border-left-color: #fff !important;
+        }
+        body.monochrome-mode .how-to-play-card .htp-title { color: #555 !important; }
+        body.monochrome-mode .how-to-play-card .htp-body { color: #aaa !important; }
+        body.monochrome-mode .how-to-play-card .htp-body span[style] { color: #fff !important; }
+        body.monochrome-mode .how-to-play-card .htp-footer { color: #555 !important; border-color: #1a1a1a !important; }
+        body.monochrome-mode .how-to-play-card .htp-footer span { color: #888 !important; }
+        body.monochrome-mode .board-status { color: #aaa !important; }
+        body.monochrome-mode #mode-desc { color: #555 !important; }
+        body.monochrome-mode .show-stats-label { color: #666 !important; }
+
+        /* Controller cursor on board */
+        .ctrl-cursor {
+            position: absolute;
+            pointer-events: none;
+            border: 2px solid #dc143c;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            transform: translate(-50%, -50%);
+            transition: left 0.07s, top 0.07s;
+            display: none;
+            z-index: 20;
+            box-shadow: 0 0 6px rgba(220,20,60,0.5);
+        }
+        .ctrl-cursor.visible { display: block; }
+        body.monochrome-mode .ctrl-cursor { border-color: #fff; box-shadow: 0 0 6px rgba(255,255,255,0.4); }
+
+        /* Controller hint badge */
+        #ctrl-hint {
+            display: none;
+            font-size: 0.62em;
+            color: #aaa;
+            letter-spacing: 2px;
+            text-align: center;
+            margin-bottom: 6px;
+        }
+        #ctrl-hint.visible { display: block; }
+        body.monochrome-mode #ctrl-hint { color: #555; }
 
         @media (max-width: 768px) {
             .gomoku-layout { flex-direction: column; }
@@ -494,15 +537,16 @@
         <main>
            <h2>Gomoku</h2>
 <p>five in a row. challenge whoever u want by username.</p>
-<div style="margin-top:16px; background:#fff; border:1px solid #e8e4de; border-left:3px solid #1a1a18; padding:20px 24px; max-width:520px;">
-    <div style="font-size:0.65em; color:#bbb; letter-spacing:3px; text-transform:uppercase; margin-bottom:14px;">how to play_</div>
-    <div style="font-size:0.83em; color:#555; display:flex; flex-direction:column; gap:12px; line-height:1.5;">
+<div style="margin-top:16px; background:#fff; border:1px solid #e8e4de; border-left:3px solid #1a1a18; padding:20px 24px; max-width:520px;" class="how-to-play-card">
+    <div class="htp-title" style="font-size:0.65em; color:#bbb; letter-spacing:3px; text-transform:lowercase; margin-bottom:14px;">how to play_</div>
+    <div class="htp-body" style="font-size:0.83em; color:#555; display:flex; flex-direction:column; gap:12px; line-height:1.5;">
         <div><span style="color:#1a1a18;">—</span> get 5 stones in a row to win — horizontal, vertical, or diagonal.</div>
         <div><span style="color:#1a1a18;">—</span> black always goes first, then alternate turns.</div>
         <div><span style="color:#1a1a18;">—</span> resign anytime if u give up — counts as a loss tho.</div>
         <div><span style="color:#1a1a18;">—</span> react w/ kaomojis to distract ur opponent! 6 sec cooldown per react.</div>
+        <div><span style="color:#1a1a18;">—</span> controller: connect an xbox / gamepad — use d-pad or left stick to aim, <kbd style="font-family:inherit; font-size:0.9em; background:#f0ede8; border:1px solid #ccc; padding:1px 5px;">A</kbd> to place a stone.</div>
     </div>
-    <div style="margin-top:16px; padding-top:14px; border-top:1px solid #f0ede8; font-size:0.76em; color:#aaa; line-height:1.8;">
+    <div class="htp-footer" style="margin-top:16px; padding-top:14px; border-top:1px solid #f0ede8; font-size:0.76em; color:#aaa; line-height:1.8;">
         <span style="color:#888;">⚠</span> both players need to be <span style="color:#555;">logged in</span> and on this page at the same time.<br>
         share the link, type their username, and start the game.
     </div>
@@ -556,7 +600,7 @@
                 <!-- Stats toggle -->
                 <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; font-size:0.8em; color:#888;">
                     <input type="checkbox" id="show-stats-toggle" checked style="accent-color:#1a1a18; cursor:pointer;">
-                    <label for="show-stats-toggle">Show my win/loss record to opponents</label>
+                    <label class="show-stats-label" for="show-stats-toggle">Show my win/loss record to opponents</label>
                 </div>
 
                 <!-- Main layout -->
@@ -611,6 +655,7 @@
                     <!-- Board -->
                     <div class="board-area">
                         <div class="board-status" id="board-status">waiting for opponent...</div>
+                        <div id="ctrl-hint">🎮 controller — d-pad / stick to move · A to place</div>
                         <div id="resign-wrap" style="display:none; margin-bottom:8px;">
                             <button id="resign-btn" style="font-size:0.72em; padding:4px 12px; background:transparent; border-color:#ccc; color:#aaa;">Resign</button>
                         </div>
@@ -627,6 +672,7 @@
 
                         <div class="board-wrap">
                             <canvas id="gomoku-board" width="450" height="450"></canvas>
+                            <div class="ctrl-cursor" id="ctrl-cursor"></div>
                             <div class="win-overlay" id="win-overlay">
                                 <h3 id="win-text">—</h3>
                                 <button id="rematch-btn">New game</button>
@@ -1410,6 +1456,185 @@ async function passTurn() {
             .eq('status', 'waiting')
             .eq('is_public', true);
     })();
+    </script>
+    <script>
+        // ============================================================
+        //  GAMEPAD CONTROLLER SUPPORT (Xbox One / standard gamepads)
+        //  Works alongside existing mouse + touch controls.
+        // ============================================================
+        (function () {
+            const BOARD_SIZE = 15;
+            const CELL = 30;
+
+            // Cursor state
+            let ctrlRow = 7, ctrlCol = 7;   // start at board center
+            let ctrlActive = false;          // true once a gamepad is connected
+            let lastDpad = { up: false, down: false, left: false, right: false };
+            let lastA = false;
+            let stickMoveTimer = null;
+            let stickRepeatRate = 150; // ms between repeated moves while holding stick
+
+            const cursor = document.getElementById('ctrl-cursor');
+            const hint   = document.getElementById('ctrl-hint');
+            const canvas = document.getElementById('gomoku-board');
+
+            function cursorPx(row, col) {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = rect.width  / canvas.width;
+                const scaleY = rect.height / canvas.height;
+                // Position relative to board-wrap (canvas parent)
+                const x = (CELL / 2 + col * CELL) * scaleX;
+                const y = (CELL / 2 + row * CELL) * scaleY;
+                return { x, y };
+            }
+
+            function updateCursorDisplay() {
+                if (!ctrlActive || !cursor) return;
+                const { x, y } = cursorPx(ctrlRow, ctrlCol);
+                cursor.style.left = x + 'px';
+                cursor.style.top  = y + 'px';
+            }
+
+            function moveCursor(dr, dc) {
+                ctrlRow = Math.max(0, Math.min(BOARD_SIZE - 1, ctrlRow + dr));
+                ctrlCol = Math.max(0, Math.min(BOARD_SIZE - 1, ctrlCol + dc));
+                updateCursorDisplay();
+            }
+
+            function activateController() {
+                if (ctrlActive) return;
+                ctrlActive = true;
+                if (cursor) cursor.classList.add('visible');
+                if (hint)   hint.classList.add('visible');
+                updateCursorDisplay();
+            }
+
+            function deactivateController() {
+                ctrlActive = false;
+                if (cursor) cursor.classList.remove('visible');
+                if (hint)   hint.classList.remove('visible');
+            }
+
+            // --- Simulate a canvas click at the cursor position ---
+            function placeStoneViaController() {
+                if (!canvas || canvas.classList.contains('disabled')) return;
+                const { x, y } = cursorPx(ctrlRow, ctrlCol);
+                const rect = canvas.getBoundingClientRect();
+                // Fire a synthetic click so existing click handler runs
+                const clickEvent = new MouseEvent('click', {
+                    bubbles: true,
+                    cancelable: true,
+                    clientX: rect.left + x,
+                    clientY: rect.top  + y,
+                });
+                canvas.dispatchEvent(clickEvent);
+            }
+
+            // --- Analog stick helper: direction from axis values ---
+            function stickDir(axisX, axisY, threshold) {
+                const dr = Math.abs(axisY) > threshold ? (axisY > 0 ? 1 : -1) : 0;
+                const dc = Math.abs(axisX) > threshold ? (axisX > 0 ? 1 : -1) : 0;
+                return { dr, dc };
+            }
+
+            let lastStickDir = { dr: 0, dc: 0 };
+            let stickHoldStart = null;
+            const STICK_THRESHOLD = 0.35;
+            const STICK_REPEAT_DELAY = 300;   // ms before repeat kicks in
+            const STICK_REPEAT_INTERVAL = 120; // ms per repeat
+
+            // --- Main polling loop ---
+            function pollGamepads() {
+                const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+                for (const pad of pads) {
+                    if (!pad || !pad.connected) continue;
+
+                    activateController();
+
+                    const b = pad.buttons;
+                    const axes = pad.axes;
+
+                    // D-pad: buttons 12=up,13=down,14=left,15=right
+                    const dUp    = b[12] && b[12].pressed;
+                    const dDown  = b[13] && b[13].pressed;
+                    const dLeft  = b[14] && b[14].pressed;
+                    const dRight = b[15] && b[15].pressed;
+
+                    if (dUp    && !lastDpad.up)    moveCursor(-1, 0);
+                    if (dDown  && !lastDpad.down)  moveCursor( 1, 0);
+                    if (dLeft  && !lastDpad.left)  moveCursor( 0,-1);
+                    if (dRight && !lastDpad.right) moveCursor( 0, 1);
+                    lastDpad = { up: dUp, down: dDown, left: dLeft, right: dRight };
+
+                    // Left stick (axes 0 = X, 1 = Y)
+                    const sDir = stickDir(axes[0] || 0, axes[1] || 0, STICK_THRESHOLD);
+                    const stickMoved = sDir.dr !== 0 || sDir.dc !== 0;
+                    const stickChanged = sDir.dr !== lastStickDir.dr || sDir.dc !== lastStickDir.dc;
+
+                    if (stickMoved) {
+                        const now = Date.now();
+                        if (stickChanged) {
+                            // New direction — move immediately
+                            moveCursor(sDir.dr, sDir.dc);
+                            stickHoldStart = now;
+                        } else if (stickHoldStart !== null && (now - stickHoldStart) > STICK_REPEAT_DELAY) {
+                            // Held long enough — repeat move at interval
+                            if (!stickMoveTimer) {
+                                stickMoveTimer = setInterval(() => {
+                                    const cur = stickDir(
+                                        (navigator.getGamepads()[pad.index]?.axes[0]) || 0,
+                                        (navigator.getGamepads()[pad.index]?.axes[1]) || 0,
+                                        STICK_THRESHOLD
+                                    );
+                                    if (cur.dr !== 0 || cur.dc !== 0) moveCursor(cur.dr, cur.dc);
+                                    else { clearInterval(stickMoveTimer); stickMoveTimer = null; }
+                                }, STICK_REPEAT_INTERVAL);
+                            }
+                        }
+                    } else {
+                        stickHoldStart = null;
+                        if (stickMoveTimer) { clearInterval(stickMoveTimer); stickMoveTimer = null; }
+                    }
+                    lastStickDir = { dr: sDir.dr, dc: sDir.dc };
+
+                    // A button (button 0) — place stone
+                    const aPressed = b[0] && b[0].pressed;
+                    if (aPressed && !lastA) placeStoneViaController();
+                    lastA = aPressed;
+
+                    break; // Only use first connected pad
+                }
+                requestAnimationFrame(pollGamepads);
+            }
+
+            // --- Connect / disconnect events ---
+            window.addEventListener('gamepadconnected', (e) => {
+                console.log('[Gomoku] Gamepad connected:', e.gamepad.id);
+                activateController();
+                pollGamepads();
+            });
+
+            window.addEventListener('gamepaddisconnected', () => {
+                deactivateController();
+            });
+
+            // Some browsers require polling to detect initial connection
+            // Start a lightweight check on first user interaction
+            let pollingStarted = false;
+            function maybeStartPolling() {
+                if (pollingStarted) return;
+                const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+                for (const p of pads) {
+                    if (p && p.connected) {
+                        pollingStarted = true;
+                        activateController();
+                        pollGamepads();
+                        return;
+                    }
+                }
+            }
+            window.addEventListener('click', maybeStartPolling, { once: false });
+        })();
     </script>
     <script>
         (function () {
