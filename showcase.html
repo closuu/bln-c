@@ -499,8 +499,9 @@
 
                     <!-- CREDIT NOTE -->
                     <div class="credit-note" style="margin-top:16px;">
-                        <strong>⚠ credit notice —</strong> if the gif was made by someone else, please credit the original artist when uploading to steam.
-                        add their name / link in the workshop item description. if you made the gif yourself, no credit needed — you're good.
+                        <strong>⚠ credit notice —</strong> if the gif was made by someone else, it's best to ask the original artist for permission before uploading to steam.
+                        if they're okay with it (or you can't reach them), credit them by name / link in the workshop item description.
+                        if you made the gif yourself, no credit needed — you're good.
                     </div>
                 </div>
 
@@ -526,16 +527,6 @@
                         <div class="instr-step">
                             <span class="instr-num">02</span>
                             <div class="instr-content">
-                                <strong>resize each panel (optional but recommended)</strong><br>
-                                steam showcase slots display better at a narrower width. go to
-                                <a href="https://ezgif.com/resize" target="_blank" rel="noopener">ezgif.com/resize</a>,
-                                upload each panel gif, set width to <strong>184px</strong> with aspect ratio locked, then export.
-                            </div>
-                        </div>
-
-                        <div class="instr-step">
-                            <span class="instr-num">03</span>
-                            <div class="instr-content">
                                 <strong>optimize file size (if needed)</strong><br>
                                 steam may reject gifs over ~2.5 mb. go to
                                 <a href="https://ezgif.com/optimize" target="_blank" rel="noopener">ezgif.com/optimize</a>
@@ -544,16 +535,7 @@
                         </div>
 
                         <div class="instr-step">
-                            <span class="instr-num">04</span>
-                            <div class="instr-content">
-                                <strong>hex fix — already done ✓</strong><br>
-                                steam requires the last byte of each gif to be <code>21</code> instead of the standard <code>3B</code> trailer.
-                                this tool applies that fix automatically when encoding — panels downloaded from here are already steam-ready. no hex editor needed.
-                            </div>
-                        </div>
-
-                        <div class="instr-step">
-                            <span class="instr-num">05</span>
+                            <span class="instr-num">03</span>
                             <div class="instr-content">
                                 <strong>upload each panel to steam workshop</strong><br>
                                 go to:
@@ -566,7 +548,7 @@
                         </div>
 
                         <div class="instr-step">
-                            <span class="instr-num">06</span>
+                            <span class="instr-num">04</span>
                             <div class="instr-content">
                                 <strong>arrange panels on your profile</strong><br>
                                 go to: <strong>steam profile → edit profile → featured showcase</strong><br>
@@ -889,6 +871,13 @@
         wb(0x00); // bg index
         wb(0x00); // pixel aspect
 
+        // Netscape Application Block — loop forever (loop count = 0)
+        wb(0x21); wb(0xFF); wb(0x0B);           // extension + app block, block size 11
+        ws('NETSCAPE2.0');                        // app identifier + auth code
+        wb(0x03); wb(0x01);                      // sub-block size 3, sub-block ID 1
+        ww(0x0000);                              // loop count 0 = infinite
+        wb(0x00);                                // block terminator
+
         for (let fi = 0; fi < frames.length; fi++) {
             const { imageData, delay } = frames[fi];
             const pixels32 = new Uint32Array(imageData.data.buffer);
@@ -1164,7 +1153,7 @@
                     }
                 }
                 ctx.putImageData(idata, 0, 0);
-                fi++;
+                fi = (fi + 1) % frames.length;
                 setTimeout(drawFrame, frame.delay || 100);
             }
             drawFrame();
