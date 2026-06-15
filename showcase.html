@@ -91,6 +91,9 @@
             letter-spacing: 2px;
         }
         body.monochrome-mode .options-label { color: #888; }
+        #size-note { opacity: 0.5; }
+        body.monochrome-mode #size-note { color: #aaa !important; opacity: 1 !important; }
+        body.monochrome-mode .msg.info { border-left-color: #fff; color: #ccc; }
 
         .panel-btn-group {
             display: flex;
@@ -408,7 +411,6 @@
         /* ── page-level text that gets lost in dark mode ── */
         body.monochrome-mode h2 { color: #fff; }
         body.monochrome-mode .page-subtitle { color: #555 !important; }
-        body.monochrome-mode #size-note { color: #888 !important; opacity: 1 !important; }
         body.monochrome-mode #dim-note  { color: #666 !important; }
         body.monochrome-mode .instr-toggle { color: #f0ede8; }
         body.monochrome-mode main p { color: #aaa; }
@@ -471,7 +473,7 @@
                         <button class="panel-btn" id="btn-4" onclick="setPanels(4)">4 panels</button>
                         <button class="panel-btn active" id="btn-5" onclick="setPanels(5)">5 panels</button>
                     </div>
-                    <span class="options-label" id="size-note" style="opacity:0.5;"></span>
+                    <span class="options-label" id="size-note"></span>
                 </div>
 
                 <!-- PROGRESS -->
