@@ -405,6 +405,14 @@
         }
         body.monochrome-mode .rule { border-color: #1a1a1a; }
 
+        /* ── page-level text that gets lost in dark mode ── */
+        body.monochrome-mode h2 { color: #fff; }
+        body.monochrome-mode .page-subtitle { color: #555 !important; }
+        body.monochrome-mode #size-note { color: #555 !important; }
+        body.monochrome-mode #dim-note  { color: #444 !important; }
+        body.monochrome-mode .instr-toggle { color: #f0ede8; }
+        body.monochrome-mode main p { color: #aaa; }
+
     </style>
 </head>
 
@@ -439,7 +447,7 @@
 
         <main>
             <h2>steam workshop showcase maker_</h2>
-            <p style="font-size:0.8em; color:#888; margin-top:4px; margin-bottom:24px; letter-spacing:1px;">
+            <p class="page-subtitle" style="font-size:0.8em; color:#888; margin-top:4px; margin-bottom:24px; letter-spacing:1px;">
                 slice your gif into vertical panels for the steam animated showcase.
             </p>
 
@@ -536,11 +544,9 @@
                         <div class="instr-step">
                             <span class="instr-num">04</span>
                             <div class="instr-content">
-                                <strong>apply the steam hex fix</strong><br>
-                                steam won't accept raw gifs — each file needs its last hex byte changed to <code>21</code>.
-                                use <a href="https://hex-works.com/" target="_blank" rel="noopener">hex-works.com</a> to do it.
-                                full method here:
-                                <a href="https://steamcommunity.com/sharedfiles/filedetails/?id=2553148921" target="_blank" rel="noopener">steamcommunity.com/sharedfiles/filedetails/?id=2553148921</a>
+                                <strong>hex fix — already done ✓</strong><br>
+                                steam requires the last byte of each gif to be <code>21</code> instead of the standard <code>3B</code> trailer.
+                                this tool applies that fix automatically when encoding — panels downloaded from here are already steam-ready. no hex editor needed.
                             </div>
                         </div>
 
@@ -920,7 +926,7 @@
             wb(0x00); // block terminator
         }
 
-        wb(0x3B); // trailer
+        wb(0x21); // trailer — changed from 0x3B to 0x21 for Steam workshop compatibility
         return new Uint8Array(buf);
     }
 
