@@ -439,7 +439,6 @@
                     <li><a href="messages.html">Messages</a></li>
                     <li><a href="gomoku.html">Gomoku</a></li>
                     <li><a href="rankings.html">Rankings</a></li>
-                    <li><a href="showcase.html">showcase maker</a></li>
                     <br>
                     <li><a href="login.html">Login</a></li>
                     <li><a href="register.html">Registration</a></li>
@@ -462,7 +461,7 @@
                     <input type="file" id="gif-input" accept="image/gif" />
                     <span class="upload-icon">◻</span>
                     <span class="upload-main">drop your gif here or click to browse</span>
-                    <span class="upload-sub">max 10 mb · gif only · 960×540 recommended</span>
+                    <span class="upload-sub">max 25 mb · gif only · 960×540 recommended</span>
                 </div>
 
                 <div class="msg" id="msg-box"></div>
@@ -529,7 +528,7 @@
                             <span class="instr-num">02</span>
                             <div class="instr-content">
                                 <strong>optimize file size (if needed)</strong><br>
-                                steam may reject gifs over ~2.5 mb. go to
+                                steam may reject gifs over ~5 mb. go to
                                 <a href="https://ezgif.com/optimize" target="_blank" rel="noopener">ezgif.com/optimize</a>
                                 and apply 20–40% optimization per panel until they're under the limit.
                             </div>
@@ -587,7 +586,7 @@
     //  STEAM SHOWCASE MAKER — core logic
     // ============================================================
 
-    const MAX_BYTES   = 10 * 1024 * 1024; // 10 MB
+    const MAX_BYTES   = 25 * 1024 * 1024; // 25 MB
     const PANEL_H     = 540;              // target height (maintains proportion)
 
     let panelCount    = 5;
@@ -1086,7 +1085,7 @@
             showMsg('only gif files are supported.', 'error'); return;
         }
         if (file.size > MAX_BYTES) {
-            showMsg(`file is too large (${(file.size/1024/1024).toFixed(1)} mb). max 10 mb.`, 'error'); return;
+            showMsg(`file is too large (${(file.size/1024/1024).toFixed(1)} mb). max 25 mb.`, 'error'); return;
         }
 
         setProgress(10, 'reading file...');
