@@ -21,8 +21,9 @@ bln-c is a multi-feature personal website built with plain html, css, and javasc
 | `rate.html` | rate my week — weekly 1–10 log with streak, ascii graph, reactions |
 | `wall.html` | sticky wall — draw on a canvas, submit for approval, appears publicly |
 | `messages.html` | messages — direct messaging between users by username |
-| `gomoku.html` | gomoku — real-time multiplayer five-in-a-row with reactions and rankings |
+| `gomoku.html` | gomoku — real-time multiplayer five-in-a-row with reactions, rankings, and controller support |
 | `rankings.html` | gomoku rankings — leaderboard with win/loss stats and avatars |
+| `showcase.html` | showcase maker — upload a gif, slice into 4 or 5 panels, preview and download as a zip for the steam workshop animated showcase |
 | `admin.html` | admin dashboard — manage users, catalogue, submissions, sticky notes |
 | `404.html` | 404 error page |
 
@@ -38,8 +39,9 @@ bln-c is a multi-feature personal website built with plain html, css, and javasc
 - **rate my week** — weekly mood log with streak counter, yearly average, ascii bar graph, word reactions
 - **sticky wall** — canvas drawing tool with pen size, undo, submit for admin approval; approved art goes public
 - **direct messages** — 1-on-1 messaging by username with kaomoji reaction presets and unread badges
-- **gomoku** — real-time multiplayer board game; challenge by username, in-game kaomoji reactions, resign, rematch, win/loss tracking
+- **gomoku** — real-time multiplayer board game; challenge by username, in-game kaomoji reactions, resign, rematch, win/loss tracking, xbox/gamepad controller support
 - **rankings** — gomoku leaderboard ranked by wins with win rate bar
+- **showcase maker** — client-side gif slicer for the steam workshop animated showcase; 4 or 5 panel modes, live animated preview, downloads a zip of steam-ready gifs (hex fix + loop block applied automatically)
 - **monochrome mode** — full site-wide oled black theme toggle, persists across sessions
 - **sound effects** — procedural web audio api sounds for every interaction.
 - **mobile responsive** — hamburger nav, touch canvas drawing, responsive layouts
