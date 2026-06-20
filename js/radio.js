@@ -392,6 +392,8 @@
             pendingLoad = null;
             execLoad(p);
         }
+        // restore session state if navigated from another page
+        doRestorePlay();
     }
 
     function onPlayerState(e) {
@@ -678,7 +680,9 @@
     });
 
     // ── session state — persist across page navigations ───────
-    const SS_KEY = 'agr_state';
+    const SS_KEY  = 'agr_state';
+    const LS_KEY  = 'agr_url';   // permanent — survives tab close
+    let savedState = null;
 
     function saveState() {
         try {
@@ -689,55 +693,56 @@
                 open:      panel.classList.contains('open'),
                 timestamp: Date.now(),
             };
-            // try to grab current time for video resume
             try { if (ytPlayer && ytReady) state.time = ytPlayer.getCurrentTime() || 0; } catch (_) {}
             sessionStorage.setItem(SS_KEY, JSON.stringify(state));
+            // also persist the url permanently so it survives tab close
+            if (state.url) localStorage.setItem(LS_KEY, state.url);
         } catch (_) {}
     }
 
     function restoreState() {
         try {
             const raw = sessionStorage.getItem(SS_KEY);
-            if (!raw) return;
-            const state = JSON.parse(raw);
-            // only restore if navigated within last 30 seconds
-            if (!state || (Date.now() - state.timestamp) > 30000) return;
+            const state = raw ? JSON.parse(raw) : null;
+            const withinSession = state && (Date.now() - state.timestamp) < 30000;
 
-            if (state.volume !== undefined) {
-                volSlider.value = state.volume;
-            }
-            if (state.open) {
-                panel.classList.add('open');
-            }
-            if (state.url) {
-                linkInput.value = state.url;
-                // wait for YT API to be ready then reload
-                const parsed = parseYTUrl(state.url);
-                if (parsed && state.playing) {
+            // always restore the last-used url from localStorage
+            const savedUrl = (withinSession && state.url) || localStorage.getItem(LS_KEY) || '';
+            if (savedUrl) linkInput.value = savedUrl;
+
+            if (withinSession) {
+                savedState = state;
+                if (state.volume !== undefined) volSlider.value = state.volume;
+                if (state.open) panel.classList.add('open');
+                if (state.url && state.playing) {
                     subEl.textContent = 'resuming...';
                     titleEl.querySelector('span').textContent = '...';
-                    const resume = () => {
-                        if (!ytReady || !ytPlayer) { setTimeout(resume, 300); return; }
-                        try {
-                            if (parsed.type === 'video') {
-                                ytPlayer.loadVideoById(parsed.id, state.time || 0);
-                            } else {
-                                loadPlaylistEmbed(parsed.id);
-                            }
-                        } catch (_) {}
-                    };
-                    setTimeout(resume, 600);
                 }
             }
         } catch (_) {}
     }
 
+    function doRestorePlay() {
+        if (!savedState || !savedState.url || !savedState.playing) return;
+        const state = savedState;
+        savedState = null; // only restore once
+        const parsed = parseYTUrl(state.url);
+        if (!parsed) return;
+        try {
+            if (parsed.type === 'video') {
+                ytPlayer.loadVideoById(parsed.id, state.time || 0);
+            } else {
+                loadPlaylistEmbed(parsed.id);
+            }
+        } catch (_) {}
+    }
+
     window.addEventListener('beforeunload', saveState);
-    window.addEventListener('pagehide',     saveState); // ios safari
+    window.addEventListener('pagehide',     saveState);
 
     // ── init ──────────────────────────────────────────────────
     initUser();
-    loadYTAPI(); // preload so player is ready when user hits load
-    restoreState();
+    restoreState(); // restore UI + queue play for when player is ready
+    loadYTAPI();    // preload — onPlayerReady will call doRestorePlay
 
 })();
