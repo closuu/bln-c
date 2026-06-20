@@ -24,7 +24,7 @@ bln-c is a multi-feature personal website built with plain html, css, and javasc
 | `gomoku.html` | gomoku — real-time multiplayer five-in-a-row with reactions, rankings, and controller support |
 | `rankings.html` | gomoku rankings — leaderboard with win/loss stats and avatars |
 | `showcase.html` | showcase maker — upload a gif, slice into 4 or 5 panels, preview and download as a zip for the steam workshop animated showcase |
-| `js/radio.js` | allongrotta — site-wide radio widget; paste a yt or yt music link, plays across all pages, tracks listening hours per user |
+| `js/radio.js` | allongrotta — site-wide radio widget; paste a yt or yt music link, tracks listening hours per user |
 | `admin.html` | admin dashboard — manage users, catalogue, submissions, sticky notes |
 | `404.html` | 404 error page |
 
