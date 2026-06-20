@@ -677,8 +677,67 @@
         if (e.key === 'Enter') { const v = linkInput.value.trim(); if (v) loadLink(v); }
     });
 
+    // ── session state — persist across page navigations ───────
+    const SS_KEY = 'agr_state';
+
+    function saveState() {
+        try {
+            const state = {
+                url:       linkInput.value.trim(),
+                playing:   isPlaying,
+                volume:    parseInt(volSlider.value),
+                open:      panel.classList.contains('open'),
+                timestamp: Date.now(),
+            };
+            // try to grab current time for video resume
+            try { if (ytPlayer && ytReady) state.time = ytPlayer.getCurrentTime() || 0; } catch (_) {}
+            sessionStorage.setItem(SS_KEY, JSON.stringify(state));
+        } catch (_) {}
+    }
+
+    function restoreState() {
+        try {
+            const raw = sessionStorage.getItem(SS_KEY);
+            if (!raw) return;
+            const state = JSON.parse(raw);
+            // only restore if navigated within last 30 seconds
+            if (!state || (Date.now() - state.timestamp) > 30000) return;
+
+            if (state.volume !== undefined) {
+                volSlider.value = state.volume;
+            }
+            if (state.open) {
+                panel.classList.add('open');
+            }
+            if (state.url) {
+                linkInput.value = state.url;
+                // wait for YT API to be ready then reload
+                const parsed = parseYTUrl(state.url);
+                if (parsed && state.playing) {
+                    subEl.textContent = 'resuming...';
+                    titleEl.querySelector('span').textContent = '...';
+                    const resume = () => {
+                        if (!ytReady || !ytPlayer) { setTimeout(resume, 300); return; }
+                        try {
+                            if (parsed.type === 'video') {
+                                ytPlayer.loadVideoById(parsed.id, state.time || 0);
+                            } else {
+                                loadPlaylistEmbed(parsed.id);
+                            }
+                        } catch (_) {}
+                    };
+                    setTimeout(resume, 600);
+                }
+            }
+        } catch (_) {}
+    }
+
+    window.addEventListener('beforeunload', saveState);
+    window.addEventListener('pagehide',     saveState); // ios safari
+
     // ── init ──────────────────────────────────────────────────
     initUser();
     loadYTAPI(); // preload so player is ready when user hits load
+    restoreState();
 
 })();
