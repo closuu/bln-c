@@ -821,8 +821,9 @@
     function setBuffering(v) {
         if (v) {
             if (asciiTimer) { clearTimeout(asciiTimer); asciiTimer = null; }
-            if (bufferingTimer) return; // already showing
+            if (bufferingTimer) return;
             asciiEl.style.color = 'crimson';
+            subEl.textContent = 'buffering - pls wait';
             function blinkFace() {
                 asciiEl.textContent = `( - ᴗ •́ )${blinkState ? ' !' : '  '}`;
                 blinkState = !blinkState;
