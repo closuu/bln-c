@@ -27,7 +27,6 @@
                     <li><a href="messages.html">Messages</a></li>
                     <li><a href="gomoku.html">Gomoku</a></li>
                     <li><a href="rankings.html">Rankings</a></li>
-                    <li><a href="showcase.html">showcase maker</a></li>
 
                     <br>
                     <li><a href="login.html">Login</a></li>
@@ -82,6 +81,25 @@
     <footer><p>&copy; 2026 - CaziWorks - qobble</p></footer>
 
     <style>
+        /* ── tick marks ── */
+        .msg-tick {
+            display: inline;
+            margin-left: 4px;
+            font-size: 0.85em;
+            color: #aaa;
+            letter-spacing: -1px;
+        }
+        .msg-tick.seen { color: #668866; }
+        body.monochrome-mode .msg-tick { color: #555; }
+        body.monochrome-mode .msg-tick.seen { color: #aaa; }
+
+        /* ── ensure chat messages always scrolls ── */
+        #chat-messages {
+            flex: 1 1 0 !important;
+            min-height: 0 !important;
+            overflow-y: auto !important;
+        }
+
         .conv-avatar {
             width: 32px;
             height: 32px;
@@ -344,8 +362,13 @@
             const isMine = msg.sender_id === currentUserId;
             const div = document.createElement('div');
             div.className = 'msg-bubble ' + (isMine ? 'mine' : 'theirs');
-            const seenTick = isMine ? (msg.seen ? ' ✓✓' : ' ✓') : '';
-            div.innerHTML = `${msg.content}<span class="msg-time">${timeAgo(msg.created_at)}${seenTick}</span>`;
+
+            // tick: only on own messages. "seen" = read, ✓ = sent
+            const tick = isMine
+                ? `<span class="msg-tick${msg.seen ? ' seen' : ''}">${msg.seen ? 'seen' : '✓'}</span>`
+                : '';
+
+            div.innerHTML = `${msg.content}<span class="msg-time">${timeAgo(msg.created_at)}${tick}</span>`;
             container.appendChild(div);
         });
 
