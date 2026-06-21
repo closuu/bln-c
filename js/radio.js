@@ -479,7 +479,7 @@
         const iframe = document.createElement('iframe');
         iframe.id    = 'agr-yt';
         iframe.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;';
-        iframe.allow = 'autoplay';
+        iframe.allow = 'autoplay; compute-pressure';
         iframe.setAttribute('allowfullscreen', '');
         iframe.src   = `https://www.youtube.com/embed?listType=playlist&list=${listId}&autoplay=1&enablejsapi=1&playsinline=1&index=${index}&start=${Math.floor(startSeconds)}`;
         document.body.appendChild(iframe);
