@@ -396,18 +396,32 @@
         doRestorePlay();
     }
 
+    let preMuteVolume = null; // volume before ad mute
+
     function onPlayerState(e) {
         const S = YT.PlayerState;
         if (e.data === S.PLAYING) {
+            // unmute if we muted for an ad
+            if (preMuteVolume !== null) {
+                setVolume(preMuteVolume);
+                preMuteVolume = null;
+            }
+            setBuffering(false);
             setPlaying(true);
             updateTrackInfo();
         } else if (e.data === S.PAUSED) {
+            setBuffering(false);
             setPlaying(false);
         } else if (e.data === S.ENDED) {
-            // playlist managed by YT — it auto-advances; if single video, restart
+            setBuffering(false);
             setTimeout(updateTrackInfo, 600);
         } else if (e.data === S.BUFFERING) {
-            subEl.textContent = 'buffering...';
+            // auto-mute — could be an ad loading
+            if (preMuteVolume === null) {
+                preMuteVolume = parseInt(volSlider.value);
+                setVolume(0);
+            }
+            setBuffering(true);
         }
     }
 
@@ -423,38 +437,58 @@
     }
 
     // ── parse URL ─────────────────────────────────────────────
-    function parseYTUrl(url) {
+    function parseUrl(url) {
         try {
             const u    = new URL(url.trim());
             const host = u.hostname.replace('www.', '');
+
+            // ── SoundCloud ──
+            if (host === 'soundcloud.com' || host === 'on.soundcloud.com') {
+                return { type: 'soundcloud', url: url.trim() };
+            }
+
+            // ── Bandcamp ──
+            if (host.endsWith('bandcamp.com')) {
+                // album or track
+                const isAlbum = u.pathname.includes('/album/');
+                return { type: 'bandcamp', url: url.trim(), isAlbum };
+            }
+
+            // ── YouTube / YouTube Music ──
             const list = u.searchParams.get('list');
             const v    = u.searchParams.get('v');
-
             if (host === 'youtu.be') {
                 const vid = u.pathname.slice(1).split('?')[0];
                 return list
-                    ? { type: 'playlist', id: list, firstVideo: vid }
-                    : { type: 'video',    id: vid };
+                    ? { type: 'yt-playlist', id: list, firstVideo: vid }
+                    : { type: 'yt-video',    id: vid };
             }
             if (host === 'youtube.com' || host === 'music.youtube.com') {
-                if (list) return { type: 'playlist', id: list, firstVideo: v || null };
-                if (v)    return { type: 'video',    id: v };
+                if (list) return { type: 'yt-playlist', id: list, firstVideo: v || null };
+                if (v)    return { type: 'yt-video',    id: v };
             }
         } catch (_) {}
+        // bare YT video ID
         if (/^[A-Za-z0-9_-]{11}$/.test(url.trim()))
-            return { type: 'video', id: url.trim() };
+            return { type: 'yt-video', id: url.trim() };
         return null;
     }
 
+    // keep old name as alias so doRestorePlay still works
+    function parseYTUrl(url) { return parseUrl(url); }
+
     // ── load link ─────────────────────────────────────────────
     function loadLink(url) {
-        const parsed = parseYTUrl(url);
+        const parsed = parseUrl(url);
         if (!parsed) { subEl.textContent = 'invalid link'; return; }
         subEl.textContent = 'loading...';
         titleEl.querySelector('span').textContent = '...';
 
-        if (parsed.type === 'video') {
-            // single video — use JS API
+        if (parsed.type === 'soundcloud') {
+            loadSoundCloud(parsed.url);
+        } else if (parsed.type === 'bandcamp') {
+            loadBandcamp(parsed.url, parsed.isAlbum);
+        } else if (parsed.type === 'yt-video') {
             if (!ytReady || !ytPlayer) {
                 pendingLoad = parsed;
                 loadYTAPI();
@@ -462,8 +496,7 @@
             } else {
                 execLoad(parsed);
             }
-        } else {
-            // playlist — use iframe embed src directly (works for ALL list types)
+        } else if (parsed.type === 'yt-playlist') {
             loadPlaylistEmbed(parsed.id);
         }
     }
@@ -550,12 +583,140 @@
         subEl.textContent = 'loading playlist...';
     }
 
+    // ── SoundCloud embed ──────────────────────────────────────
+    function loadSoundCloud(trackUrl) {
+        destroyAltPlayer();
+        const encoded = encodeURIComponent(trackUrl);
+        const iframe  = document.createElement('iframe');
+        iframe.id     = 'agr-alt';
+        iframe.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;';
+        iframe.allow  = 'autoplay';
+        iframe.src    = `https://w.soundcloud.com/player/?url=${encoded}&auto_play=true&show_artwork=false&show_comments=false&buying=false&liking=false&download=false&sharing=false&show_playcount=false&show_user=false&hide_related=true&visual=false`;
+        document.body.appendChild(iframe);
+
+        // SoundCloud Widget API via postMessage
+        iframe.onload = () => {
+            const SC_ORIGIN = 'https://w.soundcloud.com';
+            function scMsg(method, value) {
+                const msg = { method };
+                if (value !== undefined) msg.value = value;
+                iframe.contentWindow?.postMessage(JSON.stringify(msg), SC_ORIGIN);
+            }
+
+            window.addEventListener('message', function onSCMsg(e) {
+                if (e.origin !== SC_ORIGIN) return;
+                try {
+                    const d = JSON.parse(e.data);
+                    if (d.soundId === undefined && d.value === undefined) return;
+                    if (d.method === 'getCurrentSound' && d.value) {
+                        titleEl.querySelector('span').textContent = (d.value.title || 'soundcloud').toLowerCase();
+                        subEl.textContent = (d.value.user?.username || 'soundcloud').toLowerCase();
+                        const chars = (titleEl.offsetWidth || 200) / 7;
+                        titleEl.classList.toggle('short', (d.value.title || '').length < chars);
+                    }
+                    if (d.method === 'getPosition' && d.value !== undefined) {
+                        const cur = Math.floor(d.value / 1000);
+                        const dur = Math.floor((iframe._dur || 0) / 1000);
+                        timeEl.textContent = `${fmt(cur)} / ${fmt(dur)}`;
+                    }
+                    if (d.method === 'getDuration' && d.value !== undefined) {
+                        iframe._dur = d.value;
+                    }
+                } catch (_) {}
+            });
+
+            // poll for track info
+            setInterval(() => {
+                scMsg('getCurrentSound');
+                scMsg('getPosition');
+                scMsg('getDuration');
+            }, 1000);
+
+            setPlaying(true);
+            subEl.textContent = 'soundcloud';
+            titleEl.querySelector('span').textContent = 'loading...';
+
+            // alt player proxy
+            altPlayer = {
+                play:  () => scMsg('play'),
+                pause: () => scMsg('pause'),
+                next:  () => scMsg('next'),
+                prev:  () => scMsg('prev'),
+                setVolume: (v) => scMsg('setVolume', v / 100),
+                destroy: () => { try { iframe.remove(); } catch (_) {} },
+            };
+        };
+    }
+
+    // ── Bandcamp embed ────────────────────────────────────────
+    function loadBandcamp(trackUrl, isAlbum) {
+        destroyAltPlayer();
+        // Fetch Bandcamp oEmbed to get the track/album ID
+        const oembed = `https://bandcamp.com/oembed?url=${encodeURIComponent(trackUrl)}&format=json`;
+        fetch(oembed)
+            .then(r => r.json())
+            .then(data => {
+                // Extract album/track ID from the embed html
+                const match = data.html?.match(/album=(\d+)|track=(\d+)/);
+                if (!match) { subEl.textContent = 'bandcamp: could not load'; return; }
+                const isAlbumId = !!match[1];
+                const id  = match[1] || match[2];
+                const src = isAlbumId
+                    ? `https://bandcamp.com/EmbeddedPlayer/album=${id}/size=small/bgcol=ffffff/linkcol=000000/minimal=true/transparent=true/`
+                    : `https://bandcamp.com/EmbeddedPlayer/track=${id}/size=small/bgcol=ffffff/linkcol=000000/minimal=true/transparent=true/`;
+
+                const iframe = document.createElement('iframe');
+                iframe.id    = 'agr-alt';
+                iframe.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;';
+                iframe.allow = 'autoplay';
+                iframe.src   = src;
+                document.body.appendChild(iframe);
+
+                // Bandcamp doesn't have a postMessage API — display metadata from oEmbed
+                const title = (data.title || 'bandcamp track').toLowerCase();
+                titleEl.querySelector('span').textContent = title;
+                subEl.textContent = (data.author_name || 'bandcamp').toLowerCase();
+                const chars = (titleEl.offsetWidth || 200) / 7;
+                titleEl.classList.toggle('short', title.length < chars);
+                setPlaying(true);
+                // no programmatic control for Bandcamp embeds unfortunately
+                altPlayer = {
+                    play:  () => {},
+                    pause: () => {},
+                    next:  () => {},
+                    prev:  () => {},
+                    setVolume: () => {},
+                    destroy: () => { try { iframe.remove(); } catch (_) {} },
+                };
+            })
+            .catch(() => { subEl.textContent = 'bandcamp: could not load'; });
+    }
+
+    // ── alt player state (SC / BC) ────────────────────────────
+    let altPlayer = null;
+
+    function destroyAltPlayer() {
+        try { if (altPlayer) altPlayer.destroy(); } catch (_) {}
+        altPlayer = null;
+        const old = document.getElementById('agr-alt');
+        if (old) old.remove();
+        // also destroy yt if switching platforms
+        try { if (ytPlayer) ytPlayer.destroy(); } catch (_) {}
+        ytPlayer = null; ytReady = false;
+        const oldYt = document.getElementById('agr-yt');
+        if (oldYt) { oldYt.innerHTML = ''; }
+    }
+
     function execLoad(parsed) {
         try {
-            if (parsed.type === 'video') {
+            if (parsed.type === 'yt-video') {
                 ytPlayer.loadVideoById(parsed.id);
-            } else {
+            } else if (parsed.type === 'yt-playlist') {
                 loadPlaylistEmbed(parsed.id);
+            } else if (parsed.type === 'soundcloud') {
+                loadSoundCloud(parsed.url);
+            } else if (parsed.type === 'bandcamp') {
+                loadBandcamp(parsed.url, parsed.isAlbum);
             }
         } catch (err) {
             subEl.textContent = 'load failed';
@@ -654,6 +815,27 @@
     function startViz() { runAscii(80); }   // playing — fast glitch
     function stopViz()  { runAscii(400); }  // idle — slow drift
 
+    let bufferingTimer = null;
+    let blinkState     = false;
+
+    function setBuffering(v) {
+        if (v) {
+            if (asciiTimer) { clearTimeout(asciiTimer); asciiTimer = null; }
+            if (bufferingTimer) return; // already showing
+            asciiEl.style.color = 'crimson';
+            function blinkFace() {
+                asciiEl.textContent = `( - ᴗ •́ )${blinkState ? ' !' : '  '}`;
+                blinkState = !blinkState;
+                bufferingTimer = setTimeout(blinkFace, 500);
+            }
+            blinkFace();
+        } else {
+            if (bufferingTimer) { clearTimeout(bufferingTimer); bufferingTimer = null; }
+            asciiEl.style.color = '';
+            blinkState = false;
+        }
+    }
+
     // ── start idle animation immediately ─────────────────────
     stopViz();
 
@@ -726,13 +908,15 @@
             const state = {
                 url:       linkInput.value.trim(),
                 playing:   isPlaying,
-                volume:    parseInt(volSlider.value),
+                volume:    preMuteVolume !== null ? preMuteVolume : parseInt(volSlider.value),
                 open:      panel.classList.contains('open'),
                 timestamp: Date.now(),
+                time:      0,
+                index:     0,
             };
-            if (ytPlayer && ytReady) {
-                try { state.time  = ytPlayer.getCurrentTime()    || 0; } catch (_) {}
-                try { state.index = ytPlayer.getPlaylistIndex()  ?? 0; } catch (_) {}
+            if (ytPlayer) {
+                try { state.time  = ytPlayer.getCurrentTime()   || 0; } catch (_) {}
+                try { state.index = ytPlayer.getPlaylistIndex() ?? 0; } catch (_) {}
             }
             sessionStorage.setItem(SS_KEY, JSON.stringify(state));
             if (state.url) localStorage.setItem(LS_KEY, state.url);
@@ -765,13 +949,18 @@
         if (!savedState || !savedState.url || !savedState.playing) return;
         const state = savedState;
         savedState = null;
-        const parsed = parseYTUrl(state.url);
+        const parsed = parseUrl(state.url);
         if (!parsed) return;
         try {
-            if (parsed.type === 'video') {
+            if (parsed.type === 'yt-video') {
                 ytPlayer.loadVideoById(parsed.id, state.time || 0);
-            } else {
+            } else if (parsed.type === 'yt-playlist') {
+                // destroy current player and rebuild embed with saved index+time
                 loadPlaylistEmbed(parsed.id, state.index || 0, state.time || 0);
+            } else if (parsed.type === 'soundcloud') {
+                loadSoundCloud(parsed.url);
+            } else if (parsed.type === 'bandcamp') {
+                loadBandcamp(parsed.url, parsed.isAlbum);
             }
         } catch (_) {}
     }
