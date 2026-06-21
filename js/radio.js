@@ -778,8 +778,33 @@
         try { if (ytPlayer && ytReady) ytPlayer.setVolume(v); } catch (_) {}
     }
 
-    function safeNext() { try { if (ytPlayer && ytReady) ytPlayer.nextVideo(); } catch (_) {} }
-    function safePrev() { try { if (ytPlayer && ytReady) ytPlayer.previousVideo(); } catch (_) {} }
+    function skipTrack(dir) {
+        if (!ytPlayer || !ytReady) return;
+        // clear title immediately so user sees the change
+        titleEl.querySelector('span').textContent = '...';
+        subEl.textContent = 'loading track...';
+        try {
+            if (dir > 0) ytPlayer.nextVideo();
+            else         ytPlayer.previousVideo();
+        } catch (_) {}
+        // poll until the video data updates with a new title
+        const prevTitle = ytPlayer._data?.title || '';
+        let attempts = 0;
+        const poll = setInterval(() => {
+            attempts++;
+            const newTitle = ytPlayer._data?.title || '';
+            if (newTitle && newTitle !== prevTitle) {
+                clearInterval(poll);
+                updateTrackInfo();
+            } else if (attempts > 30) { // give up after 3s
+                clearInterval(poll);
+                updateTrackInfo();
+            }
+        }, 100);
+    }
+
+    function safeNext() { skipTrack(1);  }
+    function safePrev() { skipTrack(-1); }
 
     // ── track info ────────────────────────────────────────────
     function updateTrackInfo() {
@@ -853,7 +878,7 @@
             subEl.textContent   = 'buffering - pls wait';
             volRow.classList.add('glitching');
             function blinkFace() {
-                asciiEl.textContent = `( - ᴗ •́ )${blinkState ? ' !' : '  '}`;
+                asciiEl.innerHTML = `( - ᴗ •́ )${blinkState ? ' !' : '  '} <span style="color:crimson;font-size:0.85em;">pls wait</span>`;
                 blinkState = !blinkState;
                 bufferingTimer = setTimeout(blinkFace, 500);
             }
