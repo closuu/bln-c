@@ -398,7 +398,12 @@
 
     function onPlayerReady() {
         ytReady = true;
-        setVolume(parseInt(volSlider.value));
+        // if we already muted for buffering/ad, re-apply mute — don't use slider value
+        if (preMuteVolume !== null) {
+            setVolume(0);
+        } else {
+            setVolume(parseInt(volSlider.value));
+        }
         // execute anything queued before player was ready
         if (pendingLoad) {
             const p = pendingLoad;
@@ -579,7 +584,8 @@
                 }
                 if (d.event === 'onReady') {
                     ytReady = true;
-                    ytMsg('setVolume', [parseInt(volSlider.value)]);
+                    // respect mute if buffering/ad already detected
+                    ytMsg('setVolume', [preMuteVolume !== null ? 0 : parseInt(volSlider.value)]);
                     // request continuous info updates
                     ytMsg('addEventListener', ['onStateChange']);
                     setPlaying(true);
