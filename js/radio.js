@@ -186,8 +186,22 @@
         gap: 8px;
         padding: 5px 10px;
         border-bottom: 1px solid #e0ddd8;
+        transition: opacity 0.1s;
     }
     body.monochrome-mode .agr-vol-row { border-color: #1a1a1a; }
+
+    .agr-vol-row.glitching {
+        pointer-events: none;
+        animation: agr-vol-glitch 0.18s steps(1) infinite;
+    }
+    @keyframes agr-vol-glitch {
+        0%   { opacity: 1;    transform: translateX(0); }
+        20%  { opacity: 0.1;  transform: translateX(2px); }
+        40%  { opacity: 0.6;  transform: translateX(-2px); }
+        60%  { opacity: 0;    transform: translateX(1px); }
+        80%  { opacity: 0.4;  transform: translateX(-1px); }
+        100% { opacity: 0.05; transform: translateX(0); }
+    }
 
     .agr-vol-label { color: #aaa; font-size: 0.85em; flex-shrink: 0; }
     body.monochrome-mode .agr-vol-label { color: #555; }
@@ -483,6 +497,7 @@
         if (!parsed) { subEl.textContent = 'invalid link'; return; }
         subEl.textContent = 'loading...';
         titleEl.querySelector('span').textContent = '...';
+        setBuffering(true); // show buffering face immediately — ad may play first
 
         if (parsed.type === 'soundcloud') {
             loadSoundCloud(parsed.url);
@@ -815,6 +830,8 @@
     function startViz() { runAscii(80); }   // playing — fast glitch
     function stopViz()  { runAscii(400); }  // idle — slow drift
 
+    const volRow = document.querySelector('.agr-vol-row');
+
     let bufferingTimer = null;
     let blinkState     = false;
 
@@ -823,7 +840,8 @@
             if (asciiTimer) { clearTimeout(asciiTimer); asciiTimer = null; }
             if (bufferingTimer) return;
             asciiEl.style.color = 'crimson';
-            subEl.textContent = 'buffering - pls wait';
+            subEl.textContent   = 'buffering - pls wait';
+            volRow.classList.add('glitching');
             function blinkFace() {
                 asciiEl.textContent = `( - ᴗ •́ )${blinkState ? ' !' : '  '}`;
                 blinkState = !blinkState;
@@ -834,6 +852,7 @@
             if (bufferingTimer) { clearTimeout(bufferingTimer); bufferingTimer = null; }
             asciiEl.style.color = '';
             blinkState = false;
+            volRow.classList.remove('glitching');
         }
     }
 
