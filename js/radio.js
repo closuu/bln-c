@@ -477,34 +477,74 @@
         if (old) old.remove();
 
         const iframe = document.createElement('iframe');
-        iframe.id     = 'agr-yt';
-        iframe.width  = '1';
-        iframe.height = '1';
-        iframe.allow  = 'autoplay';
+        iframe.id    = 'agr-yt';
+        iframe.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;';
+        iframe.allow = 'autoplay';
         iframe.setAttribute('allowfullscreen', '');
-        // index = which track to start at, start = seek position in seconds
-        iframe.src = `https://www.youtube-nocookie.com/embed?listType=playlist&list=${listId}&autoplay=1&enablejsapi=1&playsinline=1&index=${index}&start=${Math.floor(startSeconds)}`;
+        iframe.src   = `https://www.youtube.com/embed?listType=playlist&list=${listId}&autoplay=1&enablejsapi=1&playsinline=1&index=${index}&start=${Math.floor(startSeconds)}`;
         document.body.appendChild(iframe);
 
-        iframe.onload = () => {
-            try {
-                ytPlayer = new YT.Player(iframe, {
-                    events: {
-                        onReady: (e) => {
-                            ytReady = true;
-                            e.target.setVolume(parseInt(volSlider.value));
-                            setPlaying(true);
-                            setTimeout(updateTrackInfo, 1000);
-                        },
-                        onStateChange: onPlayerState,
-                        onError:       onPlayerError,
-                    }
-                });
-            } catch (_) {
-                setPlaying(true);
-                subEl.textContent = 'playing via embed';
-            }
+        // Use postMessage to control the iframe — avoids re-hooking YT.Player entirely
+        // which causes CORS errors. We send YT iframe API commands directly.
+        function ytMsg(func, args) {
+            iframe.contentWindow?.postMessage(JSON.stringify({
+                event: 'command', func, args: args || []
+            }), '*');
+        }
+
+        // Create a lightweight proxy object that mimics YT.Player interface
+        ytPlayer = {
+            _iframe:          iframe,
+            _state:           -1,
+            playVideo:        () => ytMsg('playVideo'),
+            pauseVideo:       () => ytMsg('pauseVideo'),
+            nextVideo:        () => ytMsg('nextVideo'),
+            previousVideo:    () => ytMsg('previousVideo'),
+            setVolume:        (v) => ytMsg('setVolume', [v]),
+            getPlayerState:   () => ytPlayer._state,
+            getPlaylistIndex: () => ytPlayer._plIndex || 0,
+            getCurrentTime:   () => ytPlayer._time    || 0,
+            getDuration:      () => ytPlayer._dur      || 0,
+            getVideoData:     () => ytPlayer._data     || {},
+            destroy:          () => { try { iframe.remove(); } catch(_){} },
         };
+
+        // Listen for state/info messages back from the iframe
+        function onMsg(e) {
+            if (e.source !== iframe.contentWindow) return;
+            try {
+                const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+                if (d.event === 'infoDelivery' && d.info) {
+                    if (d.info.playerState !== undefined) {
+                        ytPlayer._state   = d.info.playerState;
+                        // fire our state handler
+                        onPlayerState({ data: d.info.playerState });
+                    }
+                    if (d.info.currentTime   !== undefined) ytPlayer._time    = d.info.currentTime;
+                    if (d.info.duration      !== undefined) ytPlayer._dur     = d.info.duration;
+                    if (d.info.playlistIndex !== undefined) ytPlayer._plIndex = d.info.playlistIndex;
+                    if (d.info.videoData)                   ytPlayer._data    = d.info.videoData;
+                }
+                if (d.event === 'onReady') {
+                    ytReady = true;
+                    ytMsg('setVolume', [parseInt(volSlider.value)]);
+                    // request continuous info updates
+                    ytMsg('addEventListener', ['onStateChange']);
+                    setPlaying(true);
+                    setTimeout(updateTrackInfo, 1000);
+                }
+            } catch (_) {}
+        }
+        window.addEventListener('message', onMsg);
+        // clean up listener when iframe is removed
+        iframe.addEventListener('load', () => {
+            // send listen for ready via postMessage
+            setTimeout(() => {
+                try {
+                    iframe.contentWindow?.postMessage(JSON.stringify({ event: 'listening' }), '*');
+                } catch (_) {}
+            }, 500);
+        });
 
         setPlaying(true);
         subEl.textContent = 'loading playlist...';
@@ -558,13 +598,14 @@
     // ── track info ────────────────────────────────────────────
     function updateTrackInfo() {
         try {
-            if (!ytPlayer || !ytReady || !ytPlayer.getVideoData) return;
+            if (!ytPlayer || !ytPlayer.getVideoData) return;
             const data  = ytPlayer.getVideoData();
-            const title = (data.title || 'unknown track').toLowerCase();
+            const title = (data.title || data.video_title || 'unknown track').toLowerCase();
+            const auth  = (data.author || data.video_author || 'youtube').toLowerCase();
             titleEl.querySelector('span').textContent = title;
             const chars = (titleEl.offsetWidth || 200) / 7;
             titleEl.classList.toggle('short', title.length < chars);
-            subEl.textContent = (data.author || 'youtube').toLowerCase();
+            subEl.textContent = auth;
         } catch (_) {}
     }
 
