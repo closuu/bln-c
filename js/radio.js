@@ -192,15 +192,43 @@
 
     .agr-vol-row.glitching {
         pointer-events: none;
-        animation: agr-vol-glitch 0.18s steps(1) infinite;
+        position: relative;
+        animation: agr-vol-glitch 0.22s steps(1) infinite;
     }
+    .agr-vol-row.glitching::before,
+    .agr-vol-row.glitching::after {
+        content: '';
+        position: absolute;
+        left: 0; right: 0;
+        background: #000;
+        animation: agr-dead-px 0.22s steps(1) infinite;
+    }
+    .agr-vol-row.glitching::before {
+        animation-delay: 0s;
+    }
+    .agr-vol-row.glitching::after {
+        animation-delay: 0.11s;
+    }
+    body.monochrome-mode .agr-vol-row.glitching::before,
+    body.monochrome-mode .agr-vol-row.glitching::after { background: #fff; }
+
     @keyframes agr-vol-glitch {
-        0%   { opacity: 1;    transform: translateX(0); }
-        20%  { opacity: 0.1;  transform: translateX(2px); }
-        40%  { opacity: 0.6;  transform: translateX(-2px); }
-        60%  { opacity: 0;    transform: translateX(1px); }
-        80%  { opacity: 0.4;  transform: translateX(-1px); }
-        100% { opacity: 0.05; transform: translateX(0); }
+        0%   { opacity: 1;   }
+        15%  { opacity: 0.05; }
+        30%  { opacity: 0.7; }
+        45%  { opacity: 0;   }
+        60%  { opacity: 0.5; }
+        75%  { opacity: 0.1; }
+        100% { opacity: 0.8; }
+    }
+    @keyframes agr-dead-px {
+        0%   { top: 20%; height: 2px; opacity: 0.9; }
+        16%  { top: 60%; height: 4px; opacity: 1;   }
+        33%  { top: 10%; height: 1px; opacity: 0.6; }
+        50%  { top: 75%; height: 3px; opacity: 1;   }
+        66%  { top: 40%; height: 2px; opacity: 0.4; }
+        83%  { top: 5%;  height: 5px; opacity: 0.8; }
+        100% { top: 55%; height: 1px; opacity: 1;   }
     }
 
     .agr-vol-label { color: #aaa; font-size: 0.85em; flex-shrink: 0; }
@@ -827,8 +855,8 @@
         tick();
     }
 
-    function startViz() { runAscii(80); }   // playing — fast glitch
-    function stopViz()  { runAscii(400); }  // idle — slow drift
+    function startViz() { if (!bufferingTimer) runAscii(80); }
+    function stopViz()  { if (!bufferingTimer) runAscii(400); }
 
     const volRow = document.querySelector('.agr-vol-row');
 
@@ -853,6 +881,8 @@
             asciiEl.style.color = '';
             blinkState = false;
             volRow.classList.remove('glitching');
+            // resume appropriate alo animation
+            if (isPlaying) startViz(); else stopViz();
         }
     }
 
