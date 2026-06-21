@@ -1718,6 +1718,7 @@ body.monochrome-mode .user-submit-form textarea {
     padding: 12px 18px;
     border-radius: 0;
     font-size: 0.78em;
+    border: none;
     border-left: 1px solid #eee;
 }
 
@@ -1761,6 +1762,7 @@ body.monochrome-mode .chat-messages { background: #0a0a0a; }
 body.monochrome-mode .msg-bubble.mine { background: #fff; color: #000; border-color: #fff; }
 body.monochrome-mode .msg-bubble.theirs { background: #111; color: #fff; border-color: #222; }
 body.monochrome-mode .chat-input-row { border-color: #222; }
+body.monochrome-mode .chat-input-row button { border-left-color: #222; }
 body.monochrome-mode .chat-input-row input { background: #000; color: #fff; }
 body.monochrome-mode .new-conv-row input { background: #000; border-color: #333; color: #fff; }
 
