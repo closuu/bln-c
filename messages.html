@@ -27,7 +27,7 @@
                     <li><a href="messages.html">Messages</a></li>
                     <li><a href="gomoku.html">Gomoku</a></li>
                     <li><a href="rankings.html">Rankings</a></li>
-                     <li><a href="showcase.html">showcase maker</a></li>
+                    <li><a href="showcase.html">showcase maker</a></li>
 
                     <br>
                     <li><a href="login.html">Login</a></li>
@@ -311,18 +311,43 @@
             reactionBar.appendChild(btn);
         });
 
-        // Re-theme reaction bar on monochrome toggle
+        // Re-theme reaction bar on monochrome toggle — with glitch transition
         document.getElementById('theme-toggle')?.addEventListener('click', () => {
-            setTimeout(() => {
-                const mono = localStorage.getItem('theme') === 'monochrome';
-                reactionBar.style.background  = mono ? '#000'    : '#faf8f5';
-                reactionBar.style.borderColor = mono ? '#222'    : '#eee';
-                reactionBar.querySelectorAll('button').forEach(b => {
-                    b.style.background  = mono ? '#000' : '#fff';
-                    b.style.color       = mono ? '#555' : '#888';
-                    b.style.borderColor = mono ? '#333' : '#ddd';
+            const btns = reactionBar.querySelectorAll('button');
+            const originals = Array.from(btns).map(b => b.textContent);
+            const glyphPool = '█▓▒░▪▫■□●○◆◇×÷±≠∞@#$%&*!?~^';
+
+            // Phase 1: scramble text + flash colors
+            let frame = 0;
+            const scrambleInterval = setInterval(() => {
+                btns.forEach((b, i) => {
+                    // random glitch chars same length as original
+                    const len = originals[i].length;
+                    b.textContent = Array.from({ length: len }, () =>
+                        glyphPool[Math.floor(Math.random() * glyphPool.length)]
+                    ).join('');
+                    // flicker bg
+                    b.style.background  = frame % 2 === 0 ? '#1a1a18' : '#f0ede8';
+                    b.style.color       = frame % 2 === 0 ? '#f0ede8' : '#1a1a18';
+                    b.style.borderColor = '#1a1a18';
                 });
-            }, 100);
+                frame++;
+                if (frame >= 5) {
+                    clearInterval(scrambleInterval);
+                    // Phase 2: restore original text + apply new theme
+                    setTimeout(() => {
+                        const mono = localStorage.getItem('theme') === 'monochrome';
+                        reactionBar.style.background  = mono ? '#000'    : '#faf8f5';
+                        reactionBar.style.borderColor = mono ? '#222'    : '#eee';
+                        btns.forEach((b, i) => {
+                            b.textContent      = originals[i];
+                            b.style.background  = mono ? '#000' : '#fff';
+                            b.style.color       = mono ? '#555' : '#888';
+                            b.style.borderColor = mono ? '#333' : '#ddd';
+                        });
+                    }, 40);
+                }
+            }, 40);
         });
 
         // Build chat header with avatar
