@@ -468,13 +468,11 @@
         }
     }
 
-    function loadPlaylistEmbed(listId) {
-        // Destroy old JS-API player if it exists
+    function loadPlaylistEmbed(listId, index = 0, startSeconds = 0) {
         try { if (ytPlayer) { ytPlayer.destroy(); } } catch (_) {}
         ytPlayer = null;
         ytReady  = false;
 
-        // Build a real visible (but tiny) iframe with the playlist
         const old = document.getElementById('agr-yt');
         if (old) old.remove();
 
@@ -484,11 +482,10 @@
         iframe.height = '1';
         iframe.allow  = 'autoplay';
         iframe.setAttribute('allowfullscreen', '');
-        // enablejsapi=1 lets us re-hook YT.Player to it after load
-        iframe.src = `https://www.youtube-nocookie.com/embed?listType=playlist&list=${listId}&autoplay=1&enablejsapi=1&playsinline=1`;
+        // index = which track to start at, start = seek position in seconds
+        iframe.src = `https://www.youtube-nocookie.com/embed?listType=playlist&list=${listId}&autoplay=1&enablejsapi=1&playsinline=1&index=${index}&start=${Math.floor(startSeconds)}`;
         document.body.appendChild(iframe);
 
-        // Re-hook JS API to the new iframe once it loads
         iframe.onload = () => {
             try {
                 ytPlayer = new YT.Player(iframe, {
@@ -504,7 +501,6 @@
                     }
                 });
             } catch (_) {
-                // fallback: just mark as playing visually
                 setPlaying(true);
                 subEl.textContent = 'playing via embed';
             }
@@ -693,9 +689,11 @@
                 open:      panel.classList.contains('open'),
                 timestamp: Date.now(),
             };
-            try { if (ytPlayer && ytReady) state.time = ytPlayer.getCurrentTime() || 0; } catch (_) {}
+            if (ytPlayer && ytReady) {
+                try { state.time  = ytPlayer.getCurrentTime()    || 0; } catch (_) {}
+                try { state.index = ytPlayer.getPlaylistIndex()  ?? 0; } catch (_) {}
+            }
             sessionStorage.setItem(SS_KEY, JSON.stringify(state));
-            // also persist the url permanently so it survives tab close
             if (state.url) localStorage.setItem(LS_KEY, state.url);
         } catch (_) {}
     }
@@ -725,14 +723,14 @@
     function doRestorePlay() {
         if (!savedState || !savedState.url || !savedState.playing) return;
         const state = savedState;
-        savedState = null; // only restore once
+        savedState = null;
         const parsed = parseYTUrl(state.url);
         if (!parsed) return;
         try {
             if (parsed.type === 'video') {
                 ytPlayer.loadVideoById(parsed.id, state.time || 0);
             } else {
-                loadPlaylistEmbed(parsed.id);
+                loadPlaylistEmbed(parsed.id, state.index || 0, state.time || 0);
             }
         } catch (_) {}
     }
