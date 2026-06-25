@@ -1099,11 +1099,41 @@
             const decoder = new GifDecoder(buffer);
             decodedGif = decoder.decode();
             if (!decodedGif.frames.length) throw new Error('no frames found');
+
+            const { width, height } = decodedGif;
+
+            // ── detect already-cropped / too-narrow gif ──
+            // A typical full showcase gif is 960×540 (or similar wide ratio).
+            // A cropped panel is narrow — roughly width < height or width < 200.
+            const minWidth = panelCount * 40; // at least 40px per panel
+            const aspectRatio = width / height;
+
+            if (width < minWidth) {
+                decodedGif = null;
+                setProgress(0, '');
+                document.getElementById('progress-wrap').classList.remove('show');
+                showMsg(
+                    `this gif looks like it's already been cropped (${width}×${height}). ` +
+                    `upload the full-width gif instead — it should be at least ${minWidth}px wide for ${panelCount} panels.`,
+                    'error'
+                );
+                return;
+            }
+
+            // warn if aspect ratio looks portrait/square (suspicious for a showcase gif)
+            if (aspectRatio < 1.2) {
+                showMsg(
+                    `heads up: this gif is ${width}×${height} — it looks narrower than expected for a showcase gif. ` +
+                    `it may already be cropped. continuing anyway...`,
+                    'info'
+                );
+            }
+
             setProgress(70, 'slicing panels...');
             await new Promise(r => setTimeout(r, 20));
             renderPreviews();
             setProgress(100, 'done!');
-            showMsg(`loaded: ${decodedGif.width}×${decodedGif.height} · ${decodedGif.frames.length} frames`, 'info');
+            showMsg(`loaded: ${width}×${height} · ${decodedGif.frames.length} frames`, 'info');
         } catch (err) {
             setProgress(0, '');
             document.getElementById('progress-wrap').classList.remove('show');
@@ -1151,7 +1181,8 @@
                 const frame = frames[fi % frames.length];
                 for (let row = 0; row < height; row++) {
                     for (let col = 0; col < pw; col++) {
-                        dst32[row * pw + col] = frame.data[row * width + (x0 + col)];
+                        const srcIdx = row * width + (x0 + col);
+                        dst32[row * pw + col] = srcIdx < frame.data.length ? frame.data[srcIdx] : 0xFF000000;
                     }
                 }
                 ctx.putImageData(idata, 0, 0);
