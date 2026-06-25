@@ -1095,36 +1095,37 @@
         setProgress(30, 'decoding gif frames...');
 
         try {
-            await new Promise(r => setTimeout(r, 20)); // let UI paint
+            await new Promise(r => setTimeout(r, 20));
+
+            // ── pre-flight: read width/height from raw GIF header bytes ──
+            // GIF header: 6 bytes signature + 2 bytes width + 2 bytes height
+            const headerView = new DataView(buffer);
+            const rawW = headerView.getUint16(6, true);
+            const rawH = headerView.getUint16(8, true);
+            const minWidth = panelCount * 40;
+            const aspectRatio = rawW / rawH;
+
+            if (rawW < minWidth || aspectRatio < 1.0) {
+                setProgress(0, '');
+                document.getElementById('progress-wrap').classList.remove('show');
+                showMsg(
+                    `this gif looks already cropped (${rawW}×${rawH}). ` +
+                    `upload the original full-width gif — needs to be at least ${minWidth}px wide for ${panelCount} panels.`,
+                    'error'
+                );
+                return;
+            }
+
             const decoder = new GifDecoder(buffer);
             decodedGif = decoder.decode();
             if (!decodedGif.frames.length) throw new Error('no frames found');
 
             const { width, height } = decodedGif;
 
-            // ── detect already-cropped / too-narrow gif ──
-            // A typical full showcase gif is 960×540 (or similar wide ratio).
-            // A cropped panel is narrow — roughly width < height or width < 200.
-            const minWidth = panelCount * 40; // at least 40px per panel
-            const aspectRatio = width / height;
-
-            if (width < minWidth) {
-                decodedGif = null;
-                setProgress(0, '');
-                document.getElementById('progress-wrap').classList.remove('show');
+            // soft warn if aspect looks suspicious even after passing
+            if (aspectRatio < 1.5) {
                 showMsg(
-                    `this gif looks like it's already been cropped (${width}×${height}). ` +
-                    `upload the full-width gif instead — it should be at least ${minWidth}px wide for ${panelCount} panels.`,
-                    'error'
-                );
-                return;
-            }
-
-            // warn if aspect ratio looks portrait/square (suspicious for a showcase gif)
-            if (aspectRatio < 1.2) {
-                showMsg(
-                    `heads up: this gif is ${width}×${height} — it looks narrower than expected for a showcase gif. ` +
-                    `it may already be cropped. continuing anyway...`,
+                    `heads up: this gif is ${width}×${height} — narrower than a typical showcase gif. continuing anyway...`,
                     'info'
                 );
             }
