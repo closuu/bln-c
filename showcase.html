@@ -408,6 +408,40 @@
         }
         body.monochrome-mode .rule { border-color: #1a1a1a; }
 
+        /* ── donate ── */
+        .donate-wrap {
+            margin-top: 28px;
+            text-align: center;
+            padding: 10px 0 4px;
+        }
+        .donate-btn {
+            display: inline-block;
+            color: crimson;
+            font-size: 0.78em;
+            letter-spacing: 2px;
+            text-decoration: none;
+            border: 1px solid crimson;
+            padding: 7px 16px;
+            transition: background 0.1s, color 0.1s;
+        }
+        .donate-btn:hover {
+            background: crimson;
+            color: #fff;
+        }
+        body.monochrome-mode .donate-btn {
+            border-color: crimson;
+            color: crimson;
+        }
+        .donate-blink {
+            animation: dono-blink 0.4s steps(1) infinite;
+            margin-right: 4px;
+            font-weight: bold;
+        }
+        @keyframes dono-blink {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0; }
+        }
+
         /* ── page-level text that gets lost in dark mode ── */
         body.monochrome-mode h2 { color: #fff; }
         body.monochrome-mode .page-subtitle { color: #888 !important; }
@@ -569,6 +603,16 @@
                 </div>
 
             </div>
+
+            <!-- donate -->
+            <div class="donate-wrap">
+                <a href="https://paypal.me/Closecall911" target="_blank" rel="noopener" class="donate-btn">
+                    <span class="donate-blink">!</span>
+                    paypal dono (totally optional... unless?) (ദ്ദി˙ᗜ˙)
+                </a>
+            </div>
+
+        </div>
         </main>
     </div>
 
